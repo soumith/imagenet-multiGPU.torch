@@ -58,30 +58,26 @@ function Optim:__init(model, optState, checkpoint_data)
     -- each parameter tensor. self.modulesToOptState maps each module to
     -- a lua table of optState clones.
     if not checkpoint_data then
-       local list = model:listModules()
-       for _,module in ipairs(list) do
-          self.modulesToOptState[module] = { }
-          local params = self.weight_bias_parameters(module)
-          -- expects either an empty table or 2 element table, one for weights
-          -- and one for biases
-          assert(pl.tablex.size(params) == 0 or pl.tablex.size(params) == 2)
-          for i, _ in ipairs(params) do
-             self.modulesToOptState[module][i] = deepcopy(optState)
-             if params[i] and params[i].is_bias then
-                -- never regularize biases
-                self.modulesToOptState[module][i].weightDecay = 0.0
-             end
-          end
-          assert(module)
-          assert(self.modulesToOptState[module])
-       end
+        self.model:for_each(function(module)
+            self.modulesToOptState[module] = { }
+            local params = self.weight_bias_parameters(module)
+            -- expects either an empty table or 2 element table, one for weights
+            -- and one for biases
+            assert(pl.tablex.size(params) == 0 or pl.tablex.size(params) == 2)
+            for i, _ in ipairs(params) do
+                self.modulesToOptState[module][i] = deepcopy(optState)
+                if params[i] and params[i].is_bias then
+                    -- never regularize biases
+                    self.modulesToOptState[module][i].weightDecay = 0.0
+                end
+            end
+            assert(module)
+            assert(self.modulesToOptState[module])
+        end)
     else
         local state = checkpoint_data.optim_state
         local modules = {}
-        local list = model:listModules()
-        for _,m in ipairs(list) do
-           table.insert(modules, m)
-        end
+        self.model:for_each(function(m) table.insert(modules, m) end)
         assert(pl.tablex.compare_no_order(modules, pl.tablex.keys(state)))
         self.modulesToOptState = state
     end
@@ -107,12 +103,11 @@ local function _type_all(obj, t)
 end
 
 function Optim:type(t)
-   local list = model:listModules()
-   for _,module in ipairs(list) do
+    self.model:for_each(function(module)
         local state= self.modulesToOptState[module]
         assert(state)
         _type_all(state, t)
-    end
+    end)
 end
 
 local function get_device_for_module(mod)
@@ -122,11 +117,8 @@ local function get_device_for_module(mod)
            local this_dev = val:getDevice()
            if this_dev ~= 0 then
                -- _make sure the tensors are allocated consistently
-              if dev_id then
-                 assert(dev_id == this_dev,
-                        'Tensors on different devices: {' .. dev_id .. ',' .. this_dev .. '}')
-                 dev_id = this_dev
-              end
+               assert(dev_id == nil or dev_id == this_dev)
+               dev_id = this_dev
            end
        end
    end
