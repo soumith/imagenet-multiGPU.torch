@@ -10,6 +10,10 @@ In this concise example (1200 lines including a general-purpose and highly scala
 ### Requirements
 - Install everything needed using the commands here: [INSTALL.md](../INSTALL.md)
 - Download Imagenet-12 dataset from http://image-net.org/download-images . It has 1000 classes and 1.2 million images.
+- Run this command:
+```bash
+git clone https://github.com/torch/nn && cd nn && git checkout getParamsByDevice && luarocks make rocks/nn-scm-1.rockspec
+```
 
 ### Data processing
 **The images dont need to be preprocessed or packaged in any database.** It is preferred to keep the dataset on an [SSD](http://en.wikipedia.org/wiki/Solid-state_drive) but we have used the data loader comfortably over NFS without loss in speed.
