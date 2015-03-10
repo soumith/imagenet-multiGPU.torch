@@ -9,7 +9,6 @@
 local gm = assert(require 'graphicsmagick')
 paths.dofile('dataset.lua')
 paths.dofile('util.lua')
-ffi=require 'ffi'
 
 -- This file contains the data-loading logic and details.
 -- It is run by each data-loader thread.
@@ -31,9 +30,10 @@ local sampleSize = {3, 224, 224}
 -- channel-wise mean and std. Calculate or load them from disk later in the script.
 local mean,std
 --------------------------------------------------------------------------------
---[[ Section 1: Create a train data loader (trainLoader),
+--[[ 
+   Section 1: Create a train data loader (trainLoader),
    which does class-balanced sampling from the dataset and does a random crop
-]]--
+--]]
 
 -- function to load the image, jitter it appropriately (random crops etc.)
 local trainHook = function(self, path)
@@ -96,12 +96,14 @@ end
 
 -- End of train loader section
 --------------------------------------------------------------------------------
---[[ Section 2: Create a test data loader (testLoader),
+--[[ 
+   Section 2: Create a test data loader (testLoader),
    which can iterate over the test set and returns an image's
-]]--
+--]]
 
 -- function to load the image
 local testHook = function(self, path)
+   collectgarbage()
    local oH = sampleSize[2]
    local oW = sampleSize[3];
    local out = torch.Tensor(3, oW, oH)
