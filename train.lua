@@ -67,7 +67,7 @@ end
 -- 2. Create loggers.
 trainLogger = optim.Logger(paths.concat(opt.save, 'train.log'))
 local batchNumber
-local top1_epoch, top5_epoch, loss_epoch
+local top1_epoch, loss_epoch
 
 -- 3. train - this function handles the high-level training loop,
 --            i.e. load data, train model, save model and state to disk
@@ -90,9 +90,7 @@ function train()
 
    local tm = torch.Timer()
    top1_epoch = 0
-   top5_epoch = 0
    loss_epoch = 0
-
    for i=1,opt.epochSize do
       -- queue jobs to data-workers
       donkeys:addjob(
@@ -104,27 +102,22 @@ function train()
          -- the end callback (runs in the main thread)
          trainBatch
       )
-      if i % 5 == 0 then
-         donkeys:synchronize()
-      end
    end
 
    donkeys:synchronize()
    cutorch.synchronize()
 
    top1_epoch = top1_epoch * 100 / (opt.batchSize * opt.epochSize)
-   top5_epoch = top5_epoch * 100 / (opt.batchSize * opt.epochSize)
    loss_epoch = loss_epoch / opt.epochSize
 
    trainLogger:add{
       ['% top1 accuracy (train set)'] = top1_epoch,
-      ['% top5 accuracy (train set)'] = top5_epoch,
       ['avg loss (train set)'] = loss_epoch
    }
    print(string.format('Epoch: [%d][TRAINING SUMMARY] Total Time(s): %.2f\t'
                           .. 'average loss (per batch): %.2f \t '
-                          .. 'accuracy(%%):\t top-1 %.2f\t top-5 %.2f',
-                       epoch, tm:time().real, loss_epoch, top1_epoch, top5_epoch))
+                          .. 'accuracy(%%):\t top-1 %.2f\t',
+                       epoch, tm:time().real, loss_epoch, top1_epoch))
    print('\n')
 
    -- save model
@@ -166,6 +159,7 @@ local dataTimer = torch.Timer()
 -- 4. trainBatch - Used by train() to train a single batch after the data is loaded.
 function trainBatch(inputsThread, labelsThread)
    cutorch.synchronize()
+   collectgarbage()
    local dataLoadingTime = dataTimer:time().real
    timer:reset()
    -- set the data and labels to the main thread tensor buffers (free any existing storage)
@@ -183,36 +177,24 @@ function trainBatch(inputsThread, labelsThread)
        criterion)
 
    cutorch.synchronize()
-   -- Calculate top-1 and top-5 errors, and print information
-   print(('Epoch: [%d][%d/%d]\tTime %.3f Err %.4f LR %.0e DataLoadingTime %.3f'):format(
-          epoch, batchNumber, opt.epochSize, timer:time().real, err,
-          optimState.learningRate, dataLoadingTime))
    batchNumber = batchNumber + 1
    loss_epoch = loss_epoch + err
-   if (batchNumber % 15) == 0 then
-       -- top-1 and top-5 error
-       local top1 = 0
-       local top5 = 0
-       do
-          local gt = labelsCPU
-          local _,prediction_sorted = outputs:float():sort(2, true) -- descending
-          for i=1,opt.batchSize do
-             local pi = prediction_sorted[i]
-             if pi[1] == gt[i] then top1 = top1 + 1; top5 = top5 + 1;
-             else for j=2,5 do if pi[j] == gt[i] then top5 = top5 + 1; break; end; end; end
-          end
-          top1_epoch = top1_epoch + top1; top5_epoch = top5_epoch + top5
-          top1 = top1 * 100 / opt.batchSize; top5 = top5 * 100 / opt.batchSize
-       end
-
-       -- print info
-       print(string.format('Accuracy ' ..
-                              'top1-%%: %.2f \t' ..
-                              'top5-%%: %.2f \t' ..
-                              'Loss: %.4f \t' ..
-                              'LR: %.0e',
-                           top1, top5, err,
-                           optimState.learningRate))
+   -- top-1 error
+   local top1 = 0
+   do
+      local _,prediction_sorted = outputs:float():sort(2, true) -- descending
+      for i=1,opt.batchSize do
+	 if prediction_sorted[i][1] == labelsCPU[i] then 
+	    top1_epoch = top1_epoch + 1; 
+	    top1 = top1 + 1
+	 end
+      end
+      top1 = top1 * 100 / opt.batchSize;
    end
+   -- Calculate top-1 error, and print information
+   print(('Epoch: [%d][%d/%d]\tTime %.3f Err %.4f Top1-%%: %.2f LR %.0e DataLoadingTime %.3f'):format(
+          epoch, batchNumber, opt.epochSize, timer:time().real, err, top1,
+          optimState.learningRate, dataLoadingTime))
+
    dataTimer:reset()
 end

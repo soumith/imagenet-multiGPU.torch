@@ -37,6 +37,7 @@ local mean,std
 
 -- function to load the image, jitter it appropriately (random crops etc.)
 local trainHook = function(self, path)
+   collectgarbage()
    -- load image with size hints
    local input = gm.Image():load(path, self.loadSize[3], self.loadSize[2])
    -- find the smaller dimension, and resize it to 256 (while keeping aspect ratio)
@@ -95,16 +96,15 @@ end
 
 -- End of train loader section
 --------------------------------------------------------------------------------
-
 --[[ Section 2: Create a test data loader (testLoader),
    which can iterate over the test set and returns an image's
-   10 crops (center + 4 corners) and their hflips]]--
+]]--
 
--- function to load the image, do 10 crops (center + 4 corners) and their hflips
+-- function to load the image
 local testHook = function(self, path)
    local oH = sampleSize[2]
    local oW = sampleSize[3];
-   local out = torch.Tensor(10, 3, oW, oH)
+   local out = torch.Tensor(3, oW, oH)
 
    local input = gm.Image():load(path, self.loadSize[3], self.loadSize[2])
    -- find the smaller dimension, and resize it to 256 (while keeping aspect ratio)
@@ -124,20 +124,7 @@ local testHook = function(self, path)
 
    local w1 = math.ceil((iW-oW)/2)
    local h1 = math.ceil((iH-oH)/2)
-   out[1] = image.crop(im, w1, h1, w1+oW, h1+oW) -- center patch
-   out[2] = image.hflip(out[1])
-   h1 = 1; w1 = 1;
-   out[3] = image.crop(im, w1, h1, w1+oW, h1+oW)  -- top-left
-   out[4] = image.hflip(out[3])
-   h1 = 1; w1 = iW-oW;
-   out[5] = image.crop(im, w1, h1, w1+oW, h1+oW)  -- top-right
-   out[6] = image.hflip(out[5])
-   h1 = iH-oH; w1 = 1;
-   out[7] = image.crop(im, w1, h1, w1+oW, h1+oW)  -- bottom-left
-   out[8] = image.hflip(out[7])
-   h1 = iH-oH; w1 = iW-oW;
-   out[9] = image.crop(im, w1, h1, w1+oW, h1+oW)  -- bottom-right
-   out[10] = image.hflip(out[9])
+   image.crop(out, im, w1, h1, w1+oW, h1+oW) -- center patch
 
    return out
 end
@@ -174,7 +161,7 @@ else
    print('Estimating the mean (per-channel, shared for all pixels) over ' .. nSamples .. ' randomly sampled training images')
    local meanEstimate = {0,0,0}
    for i=1,nSamples do
-      local img = trainLoader:sample(1)
+      local img = trainLoader:sample(1)[1]
       for j=1,3 do
          meanEstimate[j] = meanEstimate[j] + img[j]:mean()
       end
@@ -187,7 +174,7 @@ else
    print('Estimating the std (per-channel, shared for all pixels) over ' .. nSamples .. ' randomly sampled training images')
    local stdEstimate = {0,0,0}
    for i=1,nSamples do
-      local img = trainLoader:sample(1)
+      local img = trainLoader:sample(1)[1]
       for j=1,3 do
          stdEstimate[j] = stdEstimate[j] + img[j]:std()
       end
@@ -202,16 +189,4 @@ else
    cache.std = std
    torch.save(meanstdCache, cache)
    print('Time to estimate:', tm:time().real)
-end
-print('Mean: ', mean[1], mean[2], mean[3], 'Std:', std[1], std[2], std[3])
-
-do -- just check if mean/std look good now
-   local testmean = 0
-   local teststd = 0
-   for i=1,100 do
-      local img = trainLoader:sample(1)
-      testmean = testmean + img:mean()
-      teststd  = teststd + img:std()
-   end
-   print('Stats of 100 randomly sampled images after normalizing. Mean: ' .. testmean/100 .. ' Std: ' .. teststd/100)
 end

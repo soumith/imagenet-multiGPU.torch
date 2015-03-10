@@ -300,37 +300,6 @@ function dataset:size(class, list)
    end
 end
 
--- size(), size(class)
-function dataset:sizeTrain(class)
-   if self.split == 0 then
-      return 0;
-   end
-   if class then
-      return self:size(class, self.classListTrain)
-   else
-      return self.numSamples - self.testIndicesSize
-   end
-end
-
--- size(), size(class)
-function dataset:sizeTest(class)
-   if self.split == 100 then
-      return 0
-   end
-   if class then
-      return self:size(class, self.classListTest)
-   else
-      return self.testIndicesSize
-   end
-end
-
--- by default, just load the image and return it
-function dataset:defaultSampleHook(imgpath)
-   local out = image.load(imgpath, self.loadSize[1])
-   out = image.scale(out, self.sampleSize[3], self.sampleSize[2])
-   return out
-end
-
 -- getByClass
 function dataset:getByClass(class)
    local index = math.ceil(torch.uniform() * self.classListSample[class]:nElement())
@@ -342,35 +311,20 @@ end
 local function tableToOutput(self, dataTable, scalarTable)
    local data, scalarLabels, labels
    local quantity = #scalarTable
-   local samplesPerDraw
-   if dataTable[1]:dim() == 3 then samplesPerDraw = 1
-   else samplesPerDraw = dataTable[1]:size(1) end
-   if quantity == 1 and samplesPerDraw == 1 then
-      data = dataTable[1]
-      scalarLabels = scalarTable[1]
-      labels = torch.LongTensor(#(self.classes)):fill(-1)
-      labels[scalarLabels] = 1
-   else
-      data = torch.Tensor(quantity * samplesPerDraw,
-                          self.sampleSize[1], self.sampleSize[2], self.sampleSize[3])
-      scalarLabels = torch.LongTensor(quantity * samplesPerDraw)
-      labels = torch.LongTensor(quantity * samplesPerDraw, #(self.classes)):fill(-1)
-      for i=1,#dataTable do
-         local idx = (i-1)*samplesPerDraw
-         data[{{idx+1,idx+samplesPerDraw}}]:copy(dataTable[i])
-         scalarLabels[{{idx+1,idx+samplesPerDraw}}]:fill(scalarTable[i])
-         labels[{{idx+1,idx+samplesPerDraw},{scalarTable[i]}}]:fill(1)
-      end
+   assert(dataTable[1]:dim() == 3)
+   data = torch.Tensor(quantity,
+		       self.sampleSize[1], self.sampleSize[2], self.sampleSize[3])
+   scalarLabels = torch.LongTensor(quantity):fill(-1111)
+   for i=1,#dataTable do
+      data[i]:copy(dataTable[i])
+      scalarLabels[i] = scalarTable[i]
    end
-   return data, scalarLabels, labels
+   return data, scalarLabels
 end
 
 -- sampler, samples from the training set.
 function dataset:sample(quantity)
-   if self.split == 0 then
-      error('No training mode when split is set to 0')
-   end
-   quantity = quantity or 1
+   assert(quantity)
    local dataTable = {}
    local scalarTable = {}
    for i=1,quantity do
@@ -379,26 +333,13 @@ function dataset:sample(quantity)
       table.insert(dataTable, out)
       table.insert(scalarTable, class)
    end
-   local data, scalarLabels, labels = tableToOutput(self, dataTable, scalarTable)
-   return data, scalarLabels, labels
+   local data, scalarLabels = tableToOutput(self, dataTable, scalarTable)
+   return data, scalarLabels
 end
 
 function dataset:get(i1, i2)
-   local indices, quantity
-   if type(i1) == 'number' then
-      if type(i2) == 'number' then -- range of indices
-         indices = torch.range(i1, i2);
-         quantity = i2 - i1 + 1;
-      else -- single index
-         indices = {i1}; quantity = 1
-      end
-   elseif type(i1) == 'table' then
-      indices = i1; quantity = #i1;         -- table
-   elseif (type(i1) == 'userdata' and i1:nDimension() == 1) then
-      indices = i1; quantity = (#i1)[1];    -- tensor
-   else
-      error('Unsupported input types: ' .. type(i1) .. ' ' .. type(i2))
-   end
+   local indices = torch.range(i1, i2);
+   local quantity = i2 - i1 + 1;
    assert(quantity > 0)
    -- now that indices has been initialized, get the samples
    local dataTable = {}
@@ -410,24 +351,8 @@ function dataset:get(i1, i2)
       table.insert(dataTable, out)
       table.insert(scalarTable, self.imageClass[indices[i]])
    end
-   local data, scalarLabels, labels = tableToOutput(self, dataTable, scalarTable)
-   return data, scalarLabels, labels
-end
-
-function dataset:test(quantity)
-   if self.split == 100 then
-      error('No test mode when you are not splitting the data')
-   end
-   local i = 1
-   local n = self.testIndicesSize
-   local qty = quantity or 1
-   return function ()
-      if i+qty-1 <= n then
-         local data, scalarLabelss, labels = self:get(i, i+qty-1)
-         i = i + qty
-         return data, scalarLabelss, labels
-      end
-   end
+   local data, scalarLabels = tableToOutput(self, dataTable, scalarTable)
+   return data, scalarLabels
 end
 
 return dataset

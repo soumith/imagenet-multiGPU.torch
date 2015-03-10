@@ -47,7 +47,7 @@ print('nClasses: ', nClasses)
 torch.save(paths.concat(opt.save, 'classes.t7'), classes)
 
 nTest = 0
-donkeys:addjob(function() return testLoader:sizeTest() end, function(c) nTest = c end)
+donkeys:addjob(function() return testLoader:size() end, function(c) nTest = c end)
 donkeys:synchronize()
 assert(nTest > 0, "Failed to get nTest")
 print('nTest: ', nTest)
