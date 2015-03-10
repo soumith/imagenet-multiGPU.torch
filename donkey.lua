@@ -6,7 +6,7 @@
 --  LICENSE file in the root directory of this source tree. An additional grant
 --  of patent rights can be found in the PATENTS file in the same directory.
 --
-local gm = assert(require 'graphicsmagick')
+require 'image'
 paths.dofile('dataset.lua')
 paths.dofile('util.lua')
 
@@ -27,10 +27,34 @@ end
 local loadSize   = {3, 256, 256}
 local sampleSize = {3, 224, 224}
 
+local function loadImage(path)
+   local input = image.load(path)
+   if input:dim() == 2 then -- 1-channel image loaded as 2D tensor
+      input = input:view(1,input:size(1), input:size(2)):repeatTensor(3,1,1)
+   elseif input:dim() == 3 and input:size(1) == 1 then -- 1-channel image
+      input = input:repeatTensor(3,1,1)
+   elseif input:dim() == 3 and input:size(1) == 3 then -- 3-channel image
+   elseif input:dim() == 3 and input:size(1) == 4 then -- image with alpha
+      input = input[{{1,3},{},{}}]
+   else
+      print(#input)
+      error('not 2-channel or 3-channel image')
+   end
+   -- find the smaller dimension, and resize it to 256 (while keeping aspect ratio)
+   local iW = input:size(3)
+   local iH = input:size(2)
+   if iW < iH then
+      input = image.scale(input, 256, 256 * iH / iW)
+   else
+      input = image.scale(input, 256 * iW / iH, 256)
+   end
+   return input
+end
+
 -- channel-wise mean and std. Calculate or load them from disk later in the script.
 local mean,std
 --------------------------------------------------------------------------------
---[[ 
+--[[
    Section 1: Create a train data loader (trainLoader),
    which does class-balanced sampling from the dataset and does a random crop
 --]]
@@ -38,27 +62,20 @@ local mean,std
 -- function to load the image, jitter it appropriately (random crops etc.)
 local trainHook = function(self, path)
    collectgarbage()
-   -- load image with size hints
-   local input = gm.Image():load(path, self.loadSize[3], self.loadSize[2])
-   -- find the smaller dimension, and resize it to 256 (while keeping aspect ratio)
-   local iW, iH = input:size()
-   if iW < iH then
-      input:size(256, 256 * iH / iW);
-   else
-      input:size(256 * iW / iH, 256);
-   end
-   iW, iH = input:size();
+   local input = loadImage(path)
+   iW = input:size(3)
+   iH = input:size(2)
+
    -- do random crop
    local oW = sampleSize[3];
    local oH = sampleSize[2]
    local h1 = math.ceil(torch.uniform(1e-2, iH-oH))
    local w1 = math.ceil(torch.uniform(1e-2, iW-oW))
-   local out = input:crop(oW, oH, w1, h1)
-
+   local out = image.crop(input, w1, h1, w1 + oW, h1 + oH)
+   assert(out:size(2) == oW)
+   assert(out:size(3) == oH)
    -- do hflip with probability 0.5
-   if torch.uniform() > 0.5 then out:flop(); end
-
-   out = out:toTensor('float','RGB','DHW')
+   if torch.uniform() > 0.5 then out = image.hflip(out); end
    -- mean/std
    for i=1,3 do -- channels
       if mean then out[{{i},{},{}}]:add(-mean[i]) end
@@ -96,7 +113,7 @@ end
 
 -- End of train loader section
 --------------------------------------------------------------------------------
---[[ 
+--[[
    Section 2: Create a test data loader (testLoader),
    which can iterate over the test set and returns an image's
 --]]
@@ -104,30 +121,19 @@ end
 -- function to load the image
 local testHook = function(self, path)
    collectgarbage()
+   local input = loadImage(path)
    local oH = sampleSize[2]
    local oW = sampleSize[3];
-   local out = torch.Tensor(3, oW, oH)
-
-   local input = gm.Image():load(path, self.loadSize[3], self.loadSize[2])
-   -- find the smaller dimension, and resize it to 256 (while keeping aspect ratio)
-   local iW, iH = input:size()
-   if iW < iH then
-      input:size(256, 256 * iH / iW);
-   else
-      input:size(256 * iW / iH, 256);
-   end
-   iW, iH = input:size();
-   local im = input:toTensor('float','RGB','DHW')
-   -- mean/std
-   for i=1,3 do -- channels
-      if mean then im[{{i},{},{}}]:add(-mean[i]) end
-      if  std then im[{{i},{},{}}]:div(std[i]) end
-   end
-
+   iW = input:size(3)
+   iH = input:size(2)
    local w1 = math.ceil((iW-oW)/2)
    local h1 = math.ceil((iH-oH)/2)
-   image.crop(out, im, w1, h1, w1+oW, h1+oW) -- center patch
-
+   local out = image.crop(input, w1, h1, w1+oW, h1+oW) -- center patch
+   -- mean/std
+   for i=1,3 do -- channels
+      if mean then out[{{i},{},{}}]:add(-mean[i]) end
+      if  std then out[{{i},{},{}}]:div(std[i]) end
+   end
    return out
 end
 
