@@ -33,13 +33,11 @@ os.execute('mkdir -p ' .. opt.save)
 paths.dofile('data.lua')
 paths.dofile('model.lua')
 paths.dofile('train.lua')
-paths.dofile('test.lua')
 paths.dofile('util.lua')
 
 epoch = opt.epochNumber
 
 for i=1,opt.nEpochs do
    train()
-   test()
    epoch = epoch + 1
 end

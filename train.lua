@@ -92,19 +92,9 @@ function train()
    top1_epoch = 0
    loss_epoch = 0
    for i=1,opt.epochSize do
-      -- queue jobs to data-workers
-      donkeys:addjob(
-         -- the job callback (runs in data-worker thread)
-         function()
-            local inputs, labels = trainLoader:sample(opt.batchSize)
-            return sendTensor(inputs), sendTensor(labels)
-         end,
-         -- the end callback (runs in the main thread)
-         trainBatch
-      )
+      trainBatch()
    end
-
-   donkeys:synchronize()
+   
    cutorch.synchronize()
 
    top1_epoch = top1_epoch * 100 / (opt.batchSize * opt.epochSize)
@@ -122,54 +112,19 @@ function train()
 
    -- save model
    collectgarbage()
-
-   -- clear the intermediate states in the model before saving to disk
-   -- this saves lots of disk space
-   local function sanitize(net)
-      local list = model:listModules()
-      for _,val in ipairs(list) do
-            for name,field in pairs(val) do
-               if torch.type(field) == 'cdata' then val[name] = nil end
-               if name == 'homeGradBuffers' then val[name] = nil end
-               if name == 'input_gpu' then val['input_gpu'] = {} end
-               if name == 'gradOutput_gpu' then val['gradOutput_gpu'] = {} end
-               if name == 'gradInput_gpu' then val['gradInput_gpu'] = {} end
-               if (name == 'output' or name == 'gradInput') then
-                  val[name] = field.new()
-               end
-            end
-      end
-   end
-   sanitize(model)
-   torch.save(paths.concat(opt.save, 'model_' .. epoch .. '.t7'), model)
-   torch.save(paths.concat(opt.save, 'optimState_' .. epoch .. '.t7'), optimState)
 end -- of train()
 -------------------------------------------------------------------------------------------
 -- create tensor buffers in main thread and deallocate their storages.
--- the thread loaders will push their storages to these buffers when done loading
-local inputsCPU = torch.FloatTensor()
-local labelsCPU = torch.LongTensor()
-
 -- GPU inputs (preallocate)
-local inputs = torch.CudaTensor()
-local labels = torch.CudaTensor()
+local inputs = torch.CudaTensor(opt.batchSize, 3, 224, 224)
+local labels = torch.CudaTensor(opt.batchSize):fill(1)
 
 local timer = torch.Timer()
-local dataTimer = torch.Timer()
 -- 4. trainBatch - Used by train() to train a single batch after the data is loaded.
 function trainBatch(inputsThread, labelsThread)
    cutorch.synchronize()
    collectgarbage()
-   local dataLoadingTime = dataTimer:time().real
    timer:reset()
-   -- set the data and labels to the main thread tensor buffers (free any existing storage)
-   receiveTensor(inputsThread, inputsCPU)
-   receiveTensor(labelsThread, labelsCPU)
-
-   -- transfer over to GPU
-   inputs:resize(inputsCPU:size()):copy(inputsCPU)
-   labels:resize(labelsCPU:size()):copy(labelsCPU)
-
    local err, outputs = optimator:optimize(
        optim.sgd,
        inputs,
@@ -178,23 +133,10 @@ function trainBatch(inputsThread, labelsThread)
 
    cutorch.synchronize()
    batchNumber = batchNumber + 1
-   loss_epoch = loss_epoch + err
    -- top-1 error
    local top1 = 0
-   do
-      local _,prediction_sorted = outputs:float():sort(2, true) -- descending
-      for i=1,opt.batchSize do
-	 if prediction_sorted[i][1] == labelsCPU[i] then 
-	    top1_epoch = top1_epoch + 1; 
-	    top1 = top1 + 1
-	 end
-      end
-      top1 = top1 * 100 / opt.batchSize;
-   end
    -- Calculate top-1 error, and print information
-   print(('Epoch: [%d][%d/%d]\tTime %.3f Err %.4f Top1-%%: %.2f LR %.0e DataLoadingTime %.3f'):format(
-          epoch, batchNumber, opt.epochSize, timer:time().real, err, top1,
-          optimState.learningRate, dataLoadingTime))
+   print(('\tTime %.3f'):format(
+          timer:time().real))
 
-   dataTimer:reset()
 end
