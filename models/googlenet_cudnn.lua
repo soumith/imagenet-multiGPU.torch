@@ -78,7 +78,6 @@ function createModel(nGPU)
 
    if nGPU > 1 then
       assert(nGPU <= cutorch.getDeviceCount(), 'number of GPUs less than nGPU specified')
-      require 'fbcunn'
       local model_single = model
       model = nn.DataParallel(1)
       for i=1,nGPU do
