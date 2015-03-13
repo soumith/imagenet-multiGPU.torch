@@ -126,7 +126,7 @@ function train()
    -- clear the intermediate states in the model before saving to disk
    -- this saves lots of disk space
    local function sanitize(net)
-      local list = model:listModules()
+      local list = net:listModules()
       for _,val in ipairs(list) do
             for name,field in pairs(val) do
                if torch.type(field) == 'cdata' then val[name] = nil end
