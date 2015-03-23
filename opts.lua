@@ -31,8 +31,8 @@ function M.parse(arg)
     ------------- Data options ------------------------
     cmd:option('-nDonkeys',        2, 'number of donkeys to initialize (data loading threads)')
     ------------- Training options --------------------
-    cmd:option('-nEpochs',         55,    'Number of total epochs to run')
-    cmd:option('-epochSize',       10000, 'Number of batches per epoch')
+    cmd:option('-nEpochs',         1,    'Number of total epochs to run')
+    cmd:option('-epochSize',       20, 'Number of batches per epoch')
     cmd:option('-epochNumber',     1,     'Manual epoch number (useful on restarts)')
     cmd:option('-batchSize',       128,   'mini-batch size (1 = pure stochastic)')
     ---------- Optimization options ----------------------

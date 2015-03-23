@@ -94,7 +94,7 @@ function train()
    for i=1,opt.epochSize do
       trainBatch()
    end
-   
+
    cutorch.synchronize()
 
    top1_epoch = top1_epoch * 100 / (opt.batchSize * opt.epochSize)
@@ -104,10 +104,10 @@ function train()
       ['% top1 accuracy (train set)'] = top1_epoch,
       ['avg loss (train set)'] = loss_epoch
    }
-   print(string.format('Epoch: [%d][TRAINING SUMMARY] Total Time(s): %.2f\t'
-                          .. 'average loss (per batch): %.2f \t '
-                          .. 'accuracy(%%):\t top-1 %.2f\t',
-                       epoch, tm:time().real, loss_epoch, top1_epoch))
+   print(string.format('Epoch: [%d][BENCHMARK SUMMARY] Total Time(s): %.2f\t'
+                          .. 'BatchSize: %d \t '
+                          .. 'netType: %s\t backend: %s\t nGPUs: %d',
+                       epoch, tm:time().real, opt.batchSize, opt.netType, opt.backend, opt.nGPU))
    print('\n')
 
    -- save model
