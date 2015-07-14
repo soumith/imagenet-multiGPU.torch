@@ -148,7 +148,6 @@ function DataParallel:updateGradInput(_input, gradOutput)
 
     -- gradInput for each module on its appropriate gpu
     if not self.gradInput then return end -- if gradInput is nil, do nothing
-    self.gradInput:resizeAs(self.input_gpu[self.container_gpuid])
 
     self.gradInput:resizeAs(_input)
     local elementsPerSlice = self.input_gpu[1]:size(self.dimension)
