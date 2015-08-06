@@ -63,8 +63,8 @@ local mean,std
 local trainHook = function(self, path)
    collectgarbage()
    local input = loadImage(path)
-   iW = input:size(3)
-   iH = input:size(2)
+   local iW = input:size(3)
+   local iH = input:size(2)
 
    -- do random crop
    local oW = sampleSize[3];
@@ -127,8 +127,8 @@ local testHook = function(self, path)
    local input = loadImage(path)
    local oH = sampleSize[2]
    local oW = sampleSize[3];
-   iW = input:size(3)
-   iH = input:size(2)
+   local iW = input:size(3)
+   local iH = input:size(2)
    local w1 = math.ceil((iW-oW)/2)
    local h1 = math.ceil((iH-oH)/2)
    local out = image.crop(input, w1, h1, w1+oW, h1+oW) -- center patch
