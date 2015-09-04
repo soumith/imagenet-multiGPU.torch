@@ -72,8 +72,8 @@ local trainHook = function(self, path)
    local h1 = math.ceil(torch.uniform(1e-2, iH-oH))
    local w1 = math.ceil(torch.uniform(1e-2, iW-oW))
    local out = image.crop(input, w1, h1, w1 + oW, h1 + oH)
-   assert(out:size(2) == oW)
-   assert(out:size(3) == oH)
+   assert(out:size(3) == oW)
+   assert(out:size(2) == oH)
    -- do hflip with probability 0.5
    if torch.uniform() > 0.5 then out = image.hflip(out); end
    -- mean/std
