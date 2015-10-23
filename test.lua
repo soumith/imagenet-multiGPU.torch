@@ -37,7 +37,7 @@ function test()
          -- work to be done by donkey thread
          function()
             local inputs, labels = testLoader:get(indexStart, indexEnd)
-            return sendTensor(inputs), sendTensor(labels)
+            return inputs, labels
          end,
          -- callback that is run in the main thread once the work is done
          testBatch
@@ -63,16 +63,12 @@ function test()
 
 end -- of test()
 -----------------------------------------------------------------------------
-local inputsCPU = torch.FloatTensor()
-local labelsCPU = torch.LongTensor()
 local inputs = torch.CudaTensor()
 local labels = torch.CudaTensor()
 
-function testBatch(inputsThread, labelsThread)
+function testBatch(inputsCPU, labelsCPU)
    batchNumber = batchNumber + opt.batchSize
 
-   receiveTensor(inputsThread, inputsCPU)
-   receiveTensor(labelsThread, labelsCPU)
    inputs:resize(inputsCPU:size()):copy(inputsCPU)
    labels:resize(labelsCPU:size()):copy(labelsCPU)
 

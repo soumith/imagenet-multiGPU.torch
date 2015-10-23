@@ -27,26 +27,19 @@ end
 local loadSize   = {3, 256, 256}
 local sampleSize = {3, 224, 224}
 
+
 local function loadImage(path)
-   local input = image.load(path)
-   if input:dim() == 2 then -- 1-channel image loaded as 2D tensor
-      input = input:view(1,input:size(1), input:size(2)):repeatTensor(3,1,1)
-   elseif input:dim() == 3 and input:size(1) == 1 then -- 1-channel image
-      input = input:repeatTensor(3,1,1)
-   elseif input:dim() == 3 and input:size(1) == 3 then -- 3-channel image
-   elseif input:dim() == 3 and input:size(1) == 4 then -- image with alpha
-      input = input[{{1,3},{},{}}]
+   local input = image.load(path, 3, 'float')
+   -- find the smaller dimension, and resize it to loadSize (while keeping aspect ratio)
+   if input:size(3) < input:size(2) then
+      input = image.scale(input, loadSize[2], loadSize[3] * input:size(2) / input:size(3))
    else
-      print(#input)
-      error('not 2-channel or 3-channel image')
+      input = image.scale(input, loadSize[2] * input:size(3) / input:size(2), loadSize[3])
    end
-   -- find the smaller dimension, and resize it to 256 (while keeping aspect ratio)
-   local iW = input:size(3)
-   local iH = input:size(2)
-   if iW < iH then
-      input = image.scale(input, 256, 256 * iH / iW)
-   else
-      input = image.scale(input, 256 * iW / iH, 256)
+   -- mean/std
+   for i=1,3 do -- channels
+      if mean then input[{{i},{},{}}]:add(-mean[i]) end
+      if std then input[{{i},{},{}}]:div(std[i]) end
    end
    return input
 end
@@ -95,8 +88,8 @@ else
    print('Creating train metadata')
    trainLoader = dataLoader{
       paths = {paths.concat(opt.data, 'train')},
-      loadSize = {3, 256, 256},
-      sampleSize = {3, 224, 224},
+      loadSize = loadSize,
+      sampleSize = sampleSize,
       split = 100,
       verbose = true
    }
@@ -151,8 +144,8 @@ else
    print('Creating test metadata')
    testLoader = dataLoader{
       paths = {paths.concat(opt.data, 'val')},
-      loadSize = {3, 256, 256},
-      sampleSize = {3, 224, 224},
+      loadSize = loadSize,
+      sampleSize = sampleSize,
       split = 0,
       verbose = true,
       forceClasses = trainLoader.classes -- force consistent class indices between trainLoader and testLoader
