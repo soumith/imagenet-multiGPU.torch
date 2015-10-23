@@ -17,27 +17,14 @@ function createModel(nGPU)
    features:add(cudnn.SpatialConvolution(256,256,3,3,1,1,1,1))      --  13 ->  13
    features:add(cudnn.ReLU(true))
    features:add(cudnn.SpatialMaxPooling(3,3,2,2))                   -- 13 -> 6
-   if nGPU > 1 then
-      assert(nGPU <= cutorch.getDeviceCount(), 'number of GPUs less than nGPU specified')
-      local features_single = features
-      features = nn.DataParallel(1)
-      for i=1,nGPU do
-         cutorch.withDevice(i, function()
-                               features:add(features_single:clone())
-         end)
-      end
-      features.gradInput = nil
-   end
+
+   features = makeDataParallel(features, nGPU) -- defined in util.lua
 
    local classifier = nn.Sequential()
    classifier:add(nn.View(256*6*6))
 
-   local branch1
-   if nGPU == 1 then
-      branch1 = nn.Concat(2)
-   else
-      branch1 = nn.ModelParallel(2)
-   end
+   local branch1 = nn.Concat(2)
+
    for i=1,nGPU do
       local s = nn.Sequential()
       s:add(nn.Dropout(0.5))
@@ -46,12 +33,8 @@ function createModel(nGPU)
       branch1:add(s)
    end
    classifier:add(branch1)
-   local branch2
-   if nGPU == 1 then
-      branch2 = nn.Concat(2)
-   else
-      branch2 = nn.ModelParallel(2)
-   end
+
+   local branch2 = nn.Concat(2)
    for i=1,nGPU do
       local s = nn.Sequential()
       s:add(nn.Dropout(0.5))

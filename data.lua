@@ -8,6 +8,7 @@
 --
 local ffi = require 'ffi'
 local Threads = require 'threads'
+Threads.serialization('threads.sharedserialize')
 
 -- This script contains the logic to create K threads for parallel data-loading.
 -- For the data-loading details, look at donkey.lua
@@ -51,4 +52,3 @@ donkeys:addjob(function() return testLoader:size() end, function(c) nTest = c en
 donkeys:synchronize()
 assert(nTest > 0, "Failed to get nTest")
 print('nTest: ', nTest)
-

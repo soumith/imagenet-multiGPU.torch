@@ -1,13 +1,6 @@
 function createModel(nGPU)
-   assert(nGPU == 1 or nGPU == 2, '1-GPU or 2-GPU supported for AlexNet')
-   local features
-   if nGPU == 1 then
-      features = nn.Concat(2)
-   else
-      require 'fbcunn'
-      features = nn.ModelParallel(2)
-   end
 
+   local features = nn.Concat(2)
    local fb1 = nn.Sequential() -- branch 1
    fb1:add(nn.SpatialConvolutionMM(3,48,11,11,4,4,2,2))       -- 224 -> 55
    fb1:add(nn.ReLU())
@@ -30,6 +23,8 @@ function createModel(nGPU)
 
    features:add(fb1)
    features:add(fb2)
+
+   features = makeDataParallel(features, nGPU) -- defined in util.lua
 
    -- 1.3. Create Classifier (fully connected layers)
    local classifier = nn.Sequential()
