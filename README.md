@@ -3,7 +3,7 @@
 In this concise example (1200 lines including a general-purpose and highly scalable data loader for images), we showcase:
 - train [AlexNet](http://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks) or [Overfeat](http://arxiv.org/abs/1312.6229) on ImageNet
 - showcase multiple backends: CuDNN, CuNN
-- use nn.ModelParallel and nn.DataParallel to speedup training over multiple GPUs
+- use nn.DataParallelTable to speedup training over multiple GPUs
 - use nn.SpatialConvolutionCuFFT to speedup training even more
 - multithreaded data-loading from disk (showcases sending tensors from one thread to another without serialization)
 
