@@ -9,6 +9,7 @@ In this concise example (1200 lines including a general-purpose and highly scala
 
 ### Requirements
 - Install torch distro on a machine with CUDA GPU
+- If on Mac OSX, run `brew install coreutils findutils` to get GNU versions of `wc`, `find`, and `cut`
 - Download Imagenet-12 dataset from http://image-net.org/download-images . It has 1000 classes and 1.2 million images.
 - Run this command:
 ```bash
