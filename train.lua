@@ -88,7 +88,6 @@ function train()
 
    -- set the dropouts to training mode
    model:training()
-   model:cuda() -- get it back on the right GPUs.
 
    local tm = torch.Timer()
    top1_epoch = 0

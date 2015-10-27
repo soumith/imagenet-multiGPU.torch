@@ -76,6 +76,7 @@ function createModel(nGPU)
    splitter:add(main_branch):add(aux_classifier)
    local model = nn.Sequential():add(features):add(splitter)
 
+   model:cuda()
    model = makeDataParallel(model, nGPU) -- defined in util.lua
 
 

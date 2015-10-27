@@ -21,6 +21,7 @@ function createModel(nGPU)
    features:add(ccn2.SpatialMaxPooling(3,2))                   -- 13 -> 6
    features:add(nn.Transpose({4,1},{4,2},{4,3}))
 
+   features:cuda()
    features = makeDataParallel(features, nGPU) -- defined in util.lua
 
    local classifier = nn.Sequential()
@@ -48,6 +49,7 @@ function createModel(nGPU)
    classifier:add(branch2)
    classifier:add(nn.Linear(4096, 1000))
    classifier:add(nn.LogSoftMax())
+   classifier:cuda()
 
    local model = nn.Sequential():add(features):add(classifier)
 
