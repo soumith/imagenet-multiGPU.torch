@@ -20,6 +20,9 @@ function createModel(nGPU)
    features:add(nn.ReLU())
    features:add(nn.SpatialMaxPooling(2, 2, 2, 2))
 
+   features:cuda()
+   features = makeDataParallel(features, nGPU) -- defined in util.lua
+
    -- 1.3. Create Classifier (fully connected layers)
    local classifier = nn.Sequential()
    classifier:add(nn.View(1024*5*5))
@@ -34,18 +37,9 @@ function createModel(nGPU)
    classifier:add(nn.Linear(4096, nClasses))
    classifier:add(nn.LogSoftMax())
 
-   -- 1.4. Combine 1.2 and 1.3 to produce final model
-   if nGPU > 1 then
-      assert(nGPU <= cutorch.getDeviceCount(), 'number of GPUs less than nGPU specified')
-      local features_single = features
-      features = nn.DataParallel(1)
-      for i=1,nGPU do
-         cutorch.withDevice(i, function()
-                               features:add(features_single:clone())
-         end)
-      end
-   end
+   classifier:cuda()
 
+   -- 1.4. Combine 1.2 and 1.3 to produce final model
    local model = nn.Sequential():add(features):add(classifier)
 
    return model

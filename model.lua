@@ -41,7 +41,8 @@ end
 
 -- 4. Convert model to CUDA
 print('==> Converting model to CUDA')
-model = model:cuda()
+-- model is converted to CUDA in the init script itself
+-- model = model:cuda()
 criterion:cuda()
 
 collectgarbage()

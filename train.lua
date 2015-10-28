@@ -31,8 +31,6 @@ if opt.optimState ~= 'none' then
     optimState = torch.load(opt.optimState)
 end
 
-local optimator = nn.Optim(model, optimState)
-
 -- Learning rate annealing schedule. We will build a new optimizer for
 -- each epoch.
 --
@@ -76,17 +74,20 @@ function train()
    print("==> online epoch # " .. epoch)
 
    local params, newRegime = paramsForEpoch(epoch)
-   optimator:setParameters(params)
    if newRegime then
-       -- Zero the momentum vector by throwing away previous state.
-       optimator = nn.Optim(model, optimState)
+      optimState = {
+         learningRate = params.learningRate,
+         learningRateDecay = 0.0,
+         momentum = opt.momentum,
+         dampening = 0.0,
+         weightDecay = params.weightDecay
+      }
    end
    batchNumber = 0
    cutorch.synchronize()
 
    -- set the dropouts to training mode
    model:training()
-   model:cuda() -- get it back on the right GPUs.
 
    local tm = torch.Timer()
    top1_epoch = 0
@@ -97,7 +98,7 @@ function train()
          -- the job callback (runs in data-worker thread)
          function()
             local inputs, labels = trainLoader:sample(opt.batchSize)
-            return sendTensor(inputs), sendTensor(labels)
+            return inputs, labels
          end,
          -- the end callback (runs in the main thread)
          trainBatch
@@ -145,36 +146,39 @@ function train()
    torch.save(paths.concat(opt.save, 'optimState_' .. epoch .. '.t7'), optimState)
 end -- of train()
 -------------------------------------------------------------------------------------------
--- create tensor buffers in main thread and deallocate their storages.
--- the thread loaders will push their storages to these buffers when done loading
-local inputsCPU = torch.FloatTensor()
-local labelsCPU = torch.LongTensor()
-
 -- GPU inputs (preallocate)
 local inputs = torch.CudaTensor()
 local labels = torch.CudaTensor()
 
 local timer = torch.Timer()
 local dataTimer = torch.Timer()
+
+local parameters, gradParameters = model:getParameters()
+
 -- 4. trainBatch - Used by train() to train a single batch after the data is loaded.
-function trainBatch(inputsThread, labelsThread)
+function trainBatch(inputsCPU, labelsCPU)
    cutorch.synchronize()
    collectgarbage()
    local dataLoadingTime = dataTimer:time().real
    timer:reset()
-   -- set the data and labels to the main thread tensor buffers (free any existing storage)
-   receiveTensor(inputsThread, inputsCPU)
-   receiveTensor(labelsThread, labelsCPU)
 
    -- transfer over to GPU
    inputs:resize(inputsCPU:size()):copy(inputsCPU)
    labels:resize(labelsCPU:size()):copy(labelsCPU)
 
-   local err, outputs = optimator:optimize(
-       optim.sgd,
-       inputs,
-       labels,
-       criterion)
+   local err, outputs
+   feval = function(x)
+      model:zeroGradParameters()
+      outputs = model:forward(inputs)
+      err = criterion:forward(outputs, labels)
+      local gradOutputs = criterion:backward(outputs, labels)
+      model:backward(inputs, gradOutputs)
+      return err, gradParameters
+   end
+   optim.sgd(feval, parameters, optimState)
+
+   -- DataParallelTable's syncParameters
+   model:apply(function(m) if m.syncParameters then m:syncParameters() end end)
 
    cutorch.synchronize()
    batchNumber = batchNumber + 1
@@ -184,8 +188,8 @@ function trainBatch(inputsThread, labelsThread)
    do
       local _,prediction_sorted = outputs:float():sort(2, true) -- descending
       for i=1,opt.batchSize do
-	 if prediction_sorted[i][1] == labelsCPU[i] then 
-	    top1_epoch = top1_epoch + 1; 
+	 if prediction_sorted[i][1] == labelsCPU[i] then
+	    top1_epoch = top1_epoch + 1;
 	    top1 = top1 + 1
 	 end
       end

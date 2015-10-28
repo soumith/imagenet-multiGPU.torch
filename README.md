@@ -3,17 +3,14 @@
 In this concise example (1200 lines including a general-purpose and highly scalable data loader for images), we showcase:
 - train [AlexNet](http://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks) or [Overfeat](http://arxiv.org/abs/1312.6229) on ImageNet
 - showcase multiple backends: CuDNN, CuNN
-- use nn.ModelParallel and nn.DataParallel to speedup training over multiple GPUs
+- use nn.DataParallelTable to speedup training over multiple GPUs
 - use nn.SpatialConvolutionCuFFT to speedup training even more
 - multithreaded data-loading from disk (showcases sending tensors from one thread to another without serialization)
 
 ### Requirements
 - Install torch distro on a machine with CUDA GPU
+- If on Mac OSX, run `brew install coreutils findutils` to get GNU versions of `wc`, `find`, and `cut`
 - Download Imagenet-12 dataset from http://image-net.org/download-images . It has 1000 classes and 1.2 million images.
-- Run this command:
-```bash
-git clone https://github.com/torch/nn && cd nn && git checkout getParamsByDevice && luarocks make rocks/nn-scm-1.rockspec
-```
 
 ### Data processing
 **The images dont need to be preprocessed or packaged in any database.** It is preferred to keep the dataset on an [SSD](http://en.wikipedia.org/wiki/Solid-state_drive) but we have used the data loader comfortably over NFS without loss in speed.
