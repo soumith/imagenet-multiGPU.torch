@@ -36,11 +36,6 @@ local function loadImage(path)
    else
       input = image.scale(input, loadSize[2] * input:size(3) / input:size(2), loadSize[3])
    end
-   -- mean/std
-   for i=1,3 do -- channels
-      if mean then input[{{i},{},{}}]:add(-mean[i]) end
-      if std then input[{{i},{},{}}]:div(std[i]) end
-   end
    return input
 end
 
@@ -69,6 +64,11 @@ local trainHook = function(self, path)
    assert(out:size(2) == oH)
    -- do hflip with probability 0.5
    if torch.uniform() > 0.5 then out = image.hflip(out) end
+   -- mean/std
+   for i=1,3 do -- channels
+      if mean then out[{{i},{},{}}]:add(-mean[i]) end
+      if std then out[{{i},{},{}}]:div(std[i]) end
+   end
    return out
 end
 
@@ -120,6 +120,11 @@ local testHook = function(self, path)
    local w1 = math.ceil((iW-oW)/2)
    local h1 = math.ceil((iH-oH)/2)
    local out = image.crop(input, w1, h1, w1+oW, h1+oW) -- center patch
+   -- mean/std
+   for i=1,3 do -- channels
+      if mean then out[{{i},{},{}}]:add(-mean[i]) end
+      if std then out[{{i},{},{}}]:div(std[i]) end
+   end
    return out
 end
 
