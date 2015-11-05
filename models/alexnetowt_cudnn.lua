@@ -24,26 +24,14 @@ function createModel(nGPU)
    local classifier = nn.Sequential()
    classifier:add(nn.View(256*6*6))
 
-   local branch1 = nn.Concat(2)
+   classifier:add(nn.Dropout(0.5))
+   classifier:add(nn.Linear(256*6*6, 4096))
+   classifier:add(nn.ReLU())
 
-   for i=1,nGPU do
-      local s = nn.Sequential()
-      s:add(nn.Dropout(0.5))
-      s:add(nn.Linear(256*6*6, 4096/nGPU))
-      s:add(nn.ReLU())
-      branch1:add(s)
-   end
-   classifier:add(branch1)
+   classifier:add(nn.Dropout(0.5))
+   classifier:add(nn.Linear(4096, 4096))
+   classifier:add(nn.ReLU())
 
-   local branch2 = nn.Concat(2)
-   for i=1,nGPU do
-      local s = nn.Sequential()
-      s:add(nn.Dropout(0.5))
-      s:add(nn.Linear(4096, 4096/nGPU))
-      s:add(nn.ReLU())
-      branch2:add(s)
-   end
-   classifier:add(branch2)
    classifier:add(nn.Linear(4096, 1000))
    classifier:add(nn.LogSoftMax())
 
