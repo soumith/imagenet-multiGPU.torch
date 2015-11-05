@@ -40,7 +40,7 @@ function M.parse(arg)
     cmd:option('-momentum',        0.9,  'momentum')
     cmd:option('-weightDecay',     5e-4, 'weight decay')
     ---------- Model options ----------------------------------
-    cmd:option('-netType',     'alexnet', 'Options: alexnet | overfeat')
+    cmd:option('-netType',     'alexnetowtbn', 'Options: alexnet | overfeat | alexnetowtbn | vgg | googlenet')
     cmd:option('-retrain',     'none', 'provide path to model to retrain with')
     cmd:option('-optimState',  'none', 'provide path to an optimState to reload from')
     cmd:text()
