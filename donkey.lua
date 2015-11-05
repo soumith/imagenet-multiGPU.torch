@@ -151,6 +151,26 @@ end
 collectgarbage()
 -- End of test loader section
 
+
+--[[
+   Section 3: Create a classify data loader (classifyLoader),
+   which can iterate over the classify set and returns an image's
+--]]
+classifyLoader = dataLoader{
+    paths = {opt.classify},
+    loadSize = loadSize,
+    sampleSize = sampleSize,
+    split = 0,
+    verbose = true,
+}
+classifyLoader.sampleHookTest = testHook
+
+collectgarbage()
+-- End of classify loader section
+
+
+
+
 -- Estimate the per-channel mean/std (so that the loaders can normalize appropriately)
 if paths.filep(meanstdCache) then
    local meanstd = torch.load(meanstdCache)

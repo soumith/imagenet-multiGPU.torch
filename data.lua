@@ -52,3 +52,9 @@ donkeys:addjob(function() return testLoader:size() end, function(c) nTest = c en
 donkeys:synchronize()
 assert(nTest > 0, "Failed to get nTest")
 print('nTest: ', nTest)
+
+nClassify = 0
+donkeys:addjob(function() return classifyLoader:size() end, function(c) nClassify = c end)
+donkeys:synchronize()
+assert(nClassify > 0, "Failed to get nClassify")
+print('nClassify: ', nClassify)
