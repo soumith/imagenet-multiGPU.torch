@@ -9,7 +9,7 @@
 local M = { }
 
 function M.parse(arg)
-   local defaultDir = paths.concat(os.getenv('HOME'), 'fbcunn_imagenet')
+   local defaultDir = 'imagenet/'
 
     local cmd = torch.CmdLine()
     cmd:text()
@@ -19,7 +19,7 @@ function M.parse(arg)
     ------------ General options --------------------
 
     cmd:option('-cache',
-               defaultDir ..'/imagenet_runs_oss',
+               defaultDir ..'/checkpoint',
                'subdirectory in which to save/log experiments')
     cmd:option('-data',
                defaultDir .. '/imagenet_raw_images/256',
