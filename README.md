@@ -78,6 +78,9 @@ Similarly, if you would like to test your model on a new image, you can use test
 dofile('donkey.lua')
 img = testHook({loadSize}, 'test.jpg')
 model = torch.load('model_10.t7')
+if img:dim() == 3 then
+  img = img:view(1, img:size(1), img:size(2), img:size(3))
+end
 predictions = model:forward(img:cuda())
 ```
 
