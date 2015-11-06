@@ -37,7 +37,7 @@ function createModel(nGPU)
    classifier:add(nn.Linear(4096, 4096))
    classifier:add(nn.ReLU())
 
-   classifier:add(nn.Linear(4096, 1000))
+   classifier:add(nn.Linear(4096, nClasses))
    classifier:add(nn.LogSoftMax())
 
    classifier:cuda()
