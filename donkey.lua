@@ -72,42 +72,44 @@ local trainHook = function(self, path)
    return out
 end
 
-if paths.filep(trainCache) then
-   print('Loading train metadata from cache')
-   trainLoader = torch.load(trainCache)
-   trainLoader.sampleHookTrain = trainHook
-   assert(trainLoader.paths[1] == paths.concat(opt.data, 'train'),
-          'cached files dont have the same path as opt.data. Remove your cached files at: '
-             .. trainCache .. ' and rerun the program')
-else
-   print('Creating train metadata')
-   trainLoader = dataLoader{
-      paths = {paths.concat(opt.data, 'train')},
-      loadSize = loadSize,
-      sampleSize = sampleSize,
-      split = 100,
-      verbose = true
-   }
-   torch.save(trainCache, trainLoader)
-   trainLoader.sampleHookTrain = trainHook
+if opt.classify == '' then -- no classification
+   if paths.filep(trainCache) then
+      print('Loading train metadata from cache')
+      trainLoader = torch.load(trainCache)
+      trainLoader.sampleHookTrain = trainHook
+      assert(trainLoader.paths[1] == paths.concat(opt.data, 'train'),
+             'cached files dont have the same path as opt.data. Remove your cached files at: '
+                .. trainCache .. ' and rerun the program')
+   else
+      print('Creating train metadata')
+      trainLoader = dataLoader{
+         paths = {paths.concat(opt.data, 'train')},
+         loadSize = loadSize,
+         sampleSize = sampleSize,
+         split = 100,
+         verbose = true
+      }
+      torch.save(trainCache, trainLoader)
+      trainLoader.sampleHookTrain = trainHook
+   end
+   collectgarbage()
+
+   -- do some sanity checks on trainLoader
+   do
+      local class = trainLoader.imageClass
+      local nClasses = #trainLoader.classes
+      assert(class:max() <= nClasses, "class logic has error")
+      assert(class:min() >= 1, "class logic has error")
+
+   end
+
+   -- End of train loader section
+   --------------------------------------------------------------------------------
+   --[[
+      Section 2: Create a test data loader (testLoader),
+      which can iterate over the test set and returns an image's
+   --]]
 end
-collectgarbage()
-
--- do some sanity checks on trainLoader
-do
-   local class = trainLoader.imageClass
-   local nClasses = #trainLoader.classes
-   assert(class:max() <= nClasses, "class logic has error")
-   assert(class:min() >= 1, "class logic has error")
-
-end
-
--- End of train loader section
---------------------------------------------------------------------------------
---[[
-   Section 2: Create a test data loader (testLoader),
-   which can iterate over the test set and returns an image's
---]]
 
 -- function to load the image
 local testHook = function(self, path)
@@ -128,46 +130,48 @@ local testHook = function(self, path)
    return out
 end
 
-if paths.filep(testCache) then
-   print('Loading test metadata from cache')
-   testLoader = torch.load(testCache)
-   testLoader.sampleHookTest = testHook
-   assert(testLoader.paths[1] == paths.concat(opt.data, 'val'),
-          'cached files dont have the same path as opt.data. Remove your cached files at: '
-             .. testCache .. ' and rerun the program')
-else
-   print('Creating test metadata')
-   testLoader = dataLoader{
-      paths = {paths.concat(opt.data, 'val')},
-      loadSize = loadSize,
-      sampleSize = sampleSize,
-      split = 0,
-      verbose = true,
-      forceClasses = trainLoader.classes -- force consistent class indices between trainLoader and testLoader
-   }
-   torch.save(testCache, testLoader)
-   testLoader.sampleHookTest = testHook
+if opt.classify == '' then -- no classification
+   if paths.filep(testCache) then
+      print('Loading test metadata from cache')
+      testLoader = torch.load(testCache)
+      testLoader.sampleHookTest = testHook
+      assert(testLoader.paths[1] == paths.concat(opt.data, 'val'),
+             'cached files dont have the same path as opt.data. Remove your cached files at: '
+                .. testCache .. ' and rerun the program')
+   else
+      print('Creating test metadata')
+      testLoader = dataLoader{
+         paths = {paths.concat(opt.data, 'val')},
+         loadSize = loadSize,
+         sampleSize = sampleSize,
+         split = 0,
+         verbose = true,
+         forceClasses = trainLoader.classes -- force consistent class indices between trainLoader and testLoader
+      }
+      torch.save(testCache, testLoader)
+      testLoader.sampleHookTest = testHook
+   end
+   collectgarbage()
+   -- End of test loader section
 end
-collectgarbage()
--- End of test loader section
 
+if opt.classify ~= '' then -- do classification
+   --[[
+      Section 3: Create a classify data loader (classifyLoader),
+      which can iterate over the classify set and returns an image's
+   --]]
+   classifyLoader = dataLoader{
+       paths = {opt.classify},
+       loadSize = loadSize,
+       sampleSize = sampleSize,
+       split = 0,
+       verbose = true,
+   }
+   classifyLoader.sampleHookTest = testHook
 
---[[
-   Section 3: Create a classify data loader (classifyLoader),
-   which can iterate over the classify set and returns an image's
---]]
-classifyLoader = dataLoader{
-    paths = {opt.classify},
-    loadSize = loadSize,
-    sampleSize = sampleSize,
-    split = 0,
-    verbose = true,
-}
-classifyLoader.sampleHookTest = testHook
-
-collectgarbage()
--- End of classify loader section
-
+   collectgarbage()
+   -- End of classify loader section
+end
 
 
 

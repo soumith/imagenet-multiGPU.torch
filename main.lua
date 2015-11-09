@@ -34,7 +34,7 @@ paths.dofile('test.lua')
 
 epoch = opt.epochNumber
 
-if opt.classify then
+if opt.classify ~= '' then
    paths.dofile('classify.lua')
    classify()
    return

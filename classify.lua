@@ -65,7 +65,7 @@ function classifyBatch(inputsCPU)
    
    local _, pred_sorted = pred:sort(2, true)
    for i=1,pred:size(1) do
-      predFile:write(trainLoader.classes[pred_sorted[i][1]], '\n')
+      predFile:write(classes[pred_sorted[i][1]], '\n')
    end
 
    if batchNumber % 1024 == 0 then
