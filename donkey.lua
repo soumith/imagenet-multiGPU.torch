@@ -24,8 +24,8 @@ if not os.execute('cd ' .. opt.data) then
     error(("could not chdir to '%s'"):format(opt.data))
 end
 
-local loadSize   = {3, 256, 256}
-local sampleSize = {3, 224, 224}
+local loadSize   = {3, opt.imageSize, opt.imageSize}
+local sampleSize = {3, opt.cropSize, opt.cropSize}
 
 
 local function loadImage(path)
