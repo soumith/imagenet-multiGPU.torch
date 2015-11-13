@@ -1,14 +1,13 @@
 ##Training an Object Classifier in Torch-7 on multiple GPUs over [ImageNet](http://image-net.org/download-images)
 
 In this concise example (1200 lines including a general-purpose and highly scalable data loader for images), we showcase:
-- train [AlexNet](http://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks) or [Overfeat](http://arxiv.org/abs/1312.6229) on ImageNet
+- train [AlexNet](http://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks) or [Overfeat](http://arxiv.org/abs/1312.6229), VGG and Googlenet on ImageNet
 - showcase multiple backends: CuDNN, CuNN
 - use nn.DataParallelTable to speedup training over multiple GPUs
-- use nn.SpatialConvolutionCuFFT to speedup training even more
 - multithreaded data-loading from disk (showcases sending tensors from one thread to another without serialization)
 
 ### Requirements
-- Install torch distro on a machine with CUDA GPU
+- [Install torch on a machine with CUDA GPU](http://torch.ch/docs/getting-started.html#_)
 - If on Mac OSX, run `brew install coreutils findutils` to get GNU versions of `wc`, `find`, and `cut`
 - Download Imagenet-12 dataset from http://image-net.org/download-images . It has 1000 classes and 1.2 million images.
 
@@ -78,6 +77,9 @@ Similarly, if you would like to test your model on a new image, you can use test
 dofile('donkey.lua')
 img = testHook({loadSize}, 'test.jpg')
 model = torch.load('model_10.t7')
+if img:dim() == 3 then
+  img = img:view(1, img:size(1), img:size(2), img:size(3))
+end
 predictions = model:forward(img:cuda())
 ```
 

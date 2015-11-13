@@ -9,7 +9,7 @@
 local M = { }
 
 function M.parse(arg)
-   local defaultDir = paths.concat(os.getenv('HOME'), 'fbcunn_imagenet')
+   local defaultDir = 'imagenet/'
 
     local cmd = torch.CmdLine()
     cmd:text()
@@ -19,7 +19,7 @@ function M.parse(arg)
     ------------ General options --------------------
 
     cmd:option('-cache',
-               defaultDir ..'/imagenet_runs_oss',
+               defaultDir ..'/checkpoint',
                'subdirectory in which to save/log experiments')
     cmd:option('-data',
                defaultDir .. '/imagenet_raw_images/256',
@@ -42,7 +42,7 @@ function M.parse(arg)
     cmd:option('-momentum',        0.9,  'momentum')
     cmd:option('-weightDecay',     5e-4, 'weight decay')
     ---------- Model options ----------------------------------
-    cmd:option('-netType',     'alexnet', 'Options: alexnet | overfeat')
+    cmd:option('-netType',     'alexnetowtbn', 'Options: alexnet | overfeat | alexnetowtbn | vgg | googlenet')
     cmd:option('-retrain',     'none', 'provide path to model to retrain with')
     cmd:option('-optimState',  'none', 'provide path to an optimState to reload from')
     cmd:text()
