@@ -52,6 +52,8 @@ function createModel(nGPU)
    classifier:cuda()
 
    local model = nn.Sequential():add(features):add(classifier)
+   model.imageSize = 256
+   model.imageCrop = 224
 
    return model
 end

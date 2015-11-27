@@ -16,6 +16,11 @@ require 'nn'
 local opts = paths.dofile('opts.lua')
 
 opt = opts.parse(arg)
+
+paths.dofile('model.lua')
+opt.imageSize = opt.imageSize or model.imageSize
+opt.imageCrop = opt.imageCrop or model.imageCrop
+
 print(opt)
 
 torch.setdefaulttensortype('torch.FloatTensor')
@@ -28,7 +33,6 @@ os.execute('mkdir -p ' .. opt.save)
 
 paths.dofile('util.lua')
 paths.dofile('data.lua')
-paths.dofile('model.lua')
 paths.dofile('train.lua')
 paths.dofile('test.lua')
 
