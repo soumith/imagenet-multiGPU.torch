@@ -18,8 +18,8 @@ local opts = paths.dofile('opts.lua')
 opt = opts.parse(arg)
 
 paths.dofile('model.lua')
-opt.imageSize = opt.imageSize or model.imageSize
-opt.imageCrop = opt.imageCrop or model.imageCrop
+opt.imageSize = model.imageSize or opt.imageSize 
+opt.imageCrop = model.imageCrop or opt.imageCrop 
 
 print(opt)
 
