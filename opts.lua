@@ -30,6 +30,9 @@ function M.parse(arg)
     cmd:option('-backend',     'cudnn', 'Options: cudnn | ccn2 | cunn')
     ------------- Data options ------------------------
     cmd:option('-nDonkeys',        2, 'number of donkeys to initialize (data loading threads)')
+    cmd:option('-imageSize',         256,    'Smallest side of the resized image')
+    cmd:option('-cropSize',          224,    'Height and Width of image crop to be used as input layer')
+    cmd:option('-nClasses',        1000, 'number of classes in the dataset')
     ------------- Training options --------------------
     cmd:option('-nEpochs',         55,    'Number of total epochs to run')
     cmd:option('-epochSize',       10000, 'Number of batches per epoch')

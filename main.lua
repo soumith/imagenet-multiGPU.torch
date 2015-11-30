@@ -13,12 +13,20 @@ require 'xlua'
 require 'optim'
 require 'nn'
 
+torch.setdefaulttensortype('torch.FloatTensor')
+
 local opts = paths.dofile('opts.lua')
 
 opt = opts.parse(arg)
-print(opt)
 
-torch.setdefaulttensortype('torch.FloatTensor')
+nClasses = opt.nClasses
+
+paths.dofile('util.lua')
+paths.dofile('model.lua')
+opt.imageSize = model.imageSize or opt.imageSize
+opt.imageCrop = model.imageCrop or opt.imageCrop
+
+print(opt)
 
 cutorch.setDevice(opt.GPU) -- by default, use GPU 1
 torch.manualSeed(opt.manualSeed)
@@ -26,9 +34,7 @@ torch.manualSeed(opt.manualSeed)
 print('Saving everything to: ' .. opt.save)
 os.execute('mkdir -p ' .. opt.save)
 
-paths.dofile('util.lua')
 paths.dofile('data.lua')
-paths.dofile('model.lua')
 paths.dofile('train.lua')
 paths.dofile('test.lua')
 

@@ -44,6 +44,8 @@ donkeys:addjob(function() return trainLoader.classes end, function(c) classes = 
 donkeys:synchronize()
 nClasses = #classes
 assert(nClasses, "Failed to get nClasses")
+assert(nClasses == opt.nClasses,
+       "nClasses is reported different in the data loader, and in the commandline options")
 print('nClasses: ', nClasses)
 torch.save(paths.concat(opt.save, 'classes.t7'), classes)
 

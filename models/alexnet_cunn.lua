@@ -42,6 +42,8 @@ function createModel(nGPU)
 
    -- 1.4. Combine 1.1 and 1.3 to produce final model
    local model = nn.Sequential():add(features):add(classifier)
+   model.imageSize = 256
+   model.imageCrop = 224
 
    return model
 end

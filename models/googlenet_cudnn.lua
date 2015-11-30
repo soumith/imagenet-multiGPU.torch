@@ -78,6 +78,8 @@ function createModel(nGPU)
 
    model:cuda()
    model = makeDataParallel(model, nGPU) -- defined in util.lua
+   model.imageSize = 256
+   model.imageCrop = 224
 
 
    return model
