@@ -34,6 +34,12 @@ paths.dofile('test.lua')
 
 epoch = opt.epochNumber
 
+if opt.classify ~= '' then
+   paths.dofile('classify.lua')
+   classify()
+   return
+end
+
 for i=1,opt.nEpochs do
    train()
    test()

@@ -28,6 +28,7 @@ function M.parse(arg)
     cmd:option('-GPU',                1, 'Default preferred GPU')
     cmd:option('-nGPU',               1, 'Number of GPUs to use by default')
     cmd:option('-backend',     'cudnn', 'Options: cudnn | ccn2 | cunn')
+    cmd:option('-classify',    '','path to images to classify')
     ------------- Data options ------------------------
     cmd:option('-nDonkeys',        2, 'number of donkeys to initialize (data loading threads)')
     ------------- Training options --------------------
@@ -49,7 +50,7 @@ function M.parse(arg)
     -- add commandline specified options
     opt.save = paths.concat(opt.cache,
                             cmd:string('alexnet12', opt,
-                                       {retrain=true, optimState=true, cache=true, data=true}))
+                                       {retrain=true, optimState=true, cache=true, data=true, classify=true}))
     -- add date/time
     opt.save = paths.concat(opt.save, ',' .. os.date():gsub(' ',''))
     return opt

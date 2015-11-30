@@ -192,8 +192,9 @@ function trainBatch(inputsCPU, labelsCPU)
       top1 = top1 * 100 / opt.batchSize;
    end
    -- Calculate top-1 error, and print information
-   print(('Epoch: [%d][%d/%d]\tTime %.3f Err %.4f Top1-%%: %.2f LR %.0e DataLoadingTime %.3f'):format(
-          epoch, batchNumber, opt.epochSize, timer:time().real, err, top1,
+   local elapsed = timer:time().real
+   print(('Epoch: [%d][%d/%d]\tTime %.3f Throu %.3f Err %.4f Top1-%%: %.2f LR %.0e DataLoadingTime %.3f'):format(
+          epoch, batchNumber, opt.epochSize, elapsed, opt.batchSize/elapsed, err, top1,
           optimState.learningRate, dataLoadingTime))
 
    dataTimer:reset()

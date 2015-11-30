@@ -38,17 +38,33 @@ do -- start K datathreads (donkeys)
    end
 end
 
-nClasses = nil
-classes = nil
-donkeys:addjob(function() return trainLoader.classes end, function(c) classes = c end)
-donkeys:synchronize()
-nClasses = #classes
-assert(nClasses, "Failed to get nClasses")
-print('nClasses: ', nClasses)
-torch.save(paths.concat(opt.save, 'classes.t7'), classes)
+if opt.classify ~= '' then --do classification
+   local indRetrainDir = opt.retrain:find("/[^/]*$")
+   local retrainDir = opt.retrain:sub(0, indRetrainDir)
+   
+   classes = torch.load(paths.concat(retrainDir, 'classes.t7'), classes)
+   nClasses = #classes
+   assert(nClasses, "Failed to get nClasses")
+   print('nClasses: ', nClasses)
+   
+   nClassify = 0
+   donkeys:addjob(function() return classifyLoader:size() end, function(c) nClassify = c end)
+   donkeys:synchronize()
+   assert(nClassify > 0, "Failed to get nClassify")
+   print('nClassify: ', nClassify)
+else
+   nClasses = nil
+   classes = nil
+   donkeys:addjob(function() return trainLoader.classes end, function(c) classes = c end)
+   donkeys:synchronize()
+   nClasses = #classes
+   assert(nClasses, "Failed to get nClasses")
+   print('nClasses: ', nClasses)
+   torch.save(paths.concat(opt.save, 'classes.t7'), classes)
 
-nTest = 0
-donkeys:addjob(function() return testLoader:size() end, function(c) nTest = c end)
-donkeys:synchronize()
-assert(nTest > 0, "Failed to get nTest")
-print('nTest: ', nTest)
+   nTest = 0
+   donkeys:addjob(function() return testLoader:size() end, function(c) nTest = c end)
+   donkeys:synchronize()
+   assert(nTest > 0, "Failed to get nTest")
+   print('nTest: ', nTest)
+end
