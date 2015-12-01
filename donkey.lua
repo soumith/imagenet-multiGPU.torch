@@ -110,7 +110,7 @@ end
 --]]
 
 -- function to load the image
-local testHook = function(self, path)
+testHook = function(self, path)
    collectgarbage()
    local input = loadImage(path)
    local oH = sampleSize[2]
