@@ -43,7 +43,8 @@ end
 --    diff to apply to optimState,
 --    true IFF this is the first epoch of a new regime
 local function paramsForEpoch(epoch)
-    if opt.LR ~= 0.0 then -- if manually specified
+	local manuallySetLR = (opt.LR ~= 0.0)
+    if manuallySetLR then -- if manually specified
         return { }
     end
     local regimes = {
@@ -57,7 +58,7 @@ local function paramsForEpoch(epoch)
 
     for _, row in ipairs(regimes) do
         if epoch >= row[1] and epoch <= row[2] then
-            return { learningRate=row[3], weightDecay=row[4] }, epoch == row[1]
+            return { learningRate=row[3], weightDecay=row[4] }, (not manuallySetLR)
         end
     end
 end
