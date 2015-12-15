@@ -25,7 +25,7 @@ if not os.execute('cd ' .. opt.data) then
 end
 
 local loadSize   = {3, opt.imageSize, opt.imageSize}
-local sampleSize = {3, opt.cropSize, opt.cropSize}
+local sampleSize = {3, opt.imageCrop, opt.imageCrop}
 
 
 local function loadImage(path)
