@@ -303,7 +303,11 @@ end
 -- getByClass
 function dataset:getByClass(class)
    local index = math.max(1, math.ceil(torch.uniform() * self.classListSample[class]:nElement()))
-   local imgpath = ffi.string(torch.data(self.imagePath[self.classListSample[class][index]]))
+   local sample = self.classListSample[class][index]
+   if self.imagePath:size(1) < sample then
+       error(string.format('There is no path for sample %d = %d index in class %d! (There are only %d paths)', sample, index, class, self.imagePath:size(1)))
+   end
+   local imgpath = ffi.string(torch.data(self.imagePath[sample]))
    return self:sampleHookTrain(imgpath)
 end
 
