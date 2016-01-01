@@ -31,6 +31,12 @@ if opt.optimState ~= 'none' then
     optimState = torch.load(opt.optimState)
 end
 
+if opt.rngState ~= 'none' then
+    assert(paths.filep(opt.rngState), 'File not found: ' .. opt.rngState)
+    print('Loading RNG state from file: ' .. opt.rngState)
+    loadRNGState(opt.rngState, donkeys, opt.nDonkeys)
+end
+
 -- Learning rate annealing schedule. We will build a new optimizer for
 -- each epoch.
 --
@@ -151,6 +157,7 @@ function train()
    end
    sanitize(model)
    saveDataParallel(paths.concat(opt.save, 'model_' .. epoch .. '.t7'), model) -- defined in util.lua
+   saveRNGState(paths.concat(opt.save, 'rngState_' .. epoch .. '.t7'), donkeys, opt.nDonkeys) -- defined in util.lua
    torch.save(paths.concat(opt.save, 'optimState_' .. epoch .. '.t7'), optimState)
 end -- of train()
 -------------------------------------------------------------------------------------------
