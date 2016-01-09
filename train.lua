@@ -147,12 +147,16 @@ function train()
    local function sanitize(net)
       local list = net:listModules()
       for _,val in ipairs(list) do
-            for name,field in pairs(val) do
-               if torch.type(field) == 'cdata' then val[name] = nil end
-               if (name == 'output' or name == 'gradInput') then
+         for name,field in pairs(val) do
+            if torch.type(field) == 'cdata' then val[name] = nil end
+            if (name == 'output' or name == 'gradInput') then
+               if torch.isTensor(val[name]) then
                   val[name] = field.new()
+               elseif torch.type(val[name]) == 'table' then
+                  val[name] = {}
                end
             end
+         end
       end
    end
    sanitize(model)
@@ -208,10 +212,10 @@ function trainBatch(inputsCPU, labelsCPU)
    do
       local _,prediction_sorted = outputs:float():sort(2, true) -- descending
       for i=1,opt.batchSize do
-	 if prediction_sorted[i][1] == labelsCPU[i] then
-	    top1_epoch = top1_epoch + 1;
-	    top1 = top1 + 1
-	 end
+         if prediction_sorted[i][1] == labelsCPU[i] then
+            top1_epoch = top1_epoch + 1;
+            top1 = top1 + 1
+         end
       end
       top1 = top1 * 100 / opt.batchSize;
    end
