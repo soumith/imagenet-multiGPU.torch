@@ -83,6 +83,7 @@ end -- of test()
 -----------------------------------------------------------------------------
 local inputs = torch.CudaTensor()
 local labels = torch.CudaTensor()
+local print_every = 16
 
 function testBatch(inputsCPU, labelsCPU)
    batchNumber = batchNumber + opt.batchSize
@@ -102,7 +103,7 @@ function testBatch(inputsCPU, labelsCPU)
       local g = labelsCPU[i]
       if pred_sorted[i][1] == g then top1_center = top1_center + 1 end
    end
-   if batchNumber % 1024 == 0 then
+   if batchNumber % (opt.batchSize * print_every) == 0 then
       print(('Epoch: Testing [%d][%d/%d]'):format(epoch, batchNumber, nTest))
    end
 
