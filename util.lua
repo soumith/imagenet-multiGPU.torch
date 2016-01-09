@@ -72,11 +72,11 @@ function saveRNGState(filename, donkeys, num_donkeys)
       donkeys:specific(true)
       for i = 1, num_donkeys do
          donkeys:addjob(i,
-            function(idx)
-               return idx, torch.getRNGState()
+            function()
+               return __threadid, torch.getRNGState()
             end,
-            function(idx, state)
-               state.donkeys[idx] = state
+            function(idx, thread_state)
+               state.donkeys[idx] = thread_state
             end
          )
       end
@@ -99,8 +99,8 @@ function loadRNGState(filename, donkeys, num_donkeys)
       donkeys:specific(true)
       for i = 1, num_donkeys do
          donkeys:addjob(i,
-            function(idx)
-               torch.setRNGState(state.donkeys[idx])
+            function()
+               torch.setRNGState(state.donkeys[__threadid])
             end
          )
       end
