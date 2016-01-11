@@ -224,9 +224,9 @@ function trainBatch(inputsCPU, labelsCPU)
    -- top-1 error
    local top1 = 0
    do
-      local _,prediction_sorted = outputsCPU:sort(2, true) -- descending
+      local _,max_prediction = outputsCPU:max(2)
       for i=1,opt.batchSize do
-         if prediction_sorted[i][1] == labelsCPU[i] then
+         if max_prediction[i][1] == labelsCPU[i] then
             top1_epoch = top1_epoch + 1;
             top1 = top1 + 1
          end
