@@ -186,20 +186,34 @@ function trainBatch(inputsCPU, labelsCPU)
    local dataLoadingTime = dataTimer:time().real
    timer:reset()
 
-   -- transfer over to GPU
-   inputs:resize(inputsCPU:size()):copy(inputsCPU)
-   labels:resize(labelsCPU:size()):copy(labelsCPU)
-
    local err, outputs
+   local outputsCPU = torch.FloatTensor(opt.batchSize, nClasses)
    feval = function(x)
-      model:zeroGradParameters()
       outputs = model:forward(inputs)
       err = criterion:forward(outputs, labels)
       local gradOutputs = criterion:backward(outputs, labels)
       model:backward(inputs, gradOutputs)
       return err, gradParameters
    end
-   optim.sgd(feval, parameters, optimState)
+
+   local chunkedInputsCPU, chunkedLabelsCPU
+   local transferToGPU = function(from, to)
+      chunkedInputsCPU = inputsCPU:sub(from, to)
+      chunkedLabelsCPU = labelsCPU:sub(from, to)
+      inputs:resize(chunkedInputsCPU:size()):copy(chunkedInputsCPU)
+      labels:resize(chunkedLabelsCPU:size()):copy(chunkedLabelsCPU)
+   end
+
+   model:zeroGradParameters()
+   local chunk_size = math.floor(opt.batchSize / opt.batchChunks)
+   for i=1,opt.batchChunks do
+      local chunk_start = chunk_size * (i-1) + 1
+      -- Take all remaining samples in the last iteration
+      local chunk_end = chunk_size * i and i < opt.batchChunks or -1
+      transferToGPU(chunk_start, chunk_end)
+      optim.sgd(feval, parameters, optimState)
+      outputsCPU:sub(chunk_start, chunk_end):copy(outputs)
+   end
 
    -- DataParallelTable's syncParameters
    model:apply(function(m) if m.syncParameters then m:syncParameters() end end)
@@ -210,7 +224,7 @@ function trainBatch(inputsCPU, labelsCPU)
    -- top-1 error
    local top1 = 0
    do
-      local _,prediction_sorted = outputs:float():sort(2, true) -- descending
+      local _,prediction_sorted = outputsCPU:sort(2, true) -- descending
       for i=1,opt.batchSize do
          if prediction_sorted[i][1] == labelsCPU[i] then
             top1_epoch = top1_epoch + 1;
@@ -224,7 +238,7 @@ function trainBatch(inputsCPU, labelsCPU)
           epoch, batchNumber, opt.epochSize, timer:time().real, err, top1,
           optimState.learningRate, dataLoadingTime))
 
-   if trainConf then trainConf:batchAdd(outputs:float(), labelsCPU) end
+   if trainConf then trainConf:batchAdd(outputsCPU, labelsCPU) end
 
    dataTimer:reset()
 end
