@@ -119,7 +119,7 @@ testHook = function(self, path)
    local iH = input:size(2)
    local w1 = math.ceil((iW-oW)/2)
    local h1 = math.ceil((iH-oH)/2)
-   local out = image.crop(input, w1, h1, w1+oW, h1+oW) -- center patch
+   local out = image.crop(input, w1, h1, w1+oW, h1+oH) -- center patch
    -- mean/std
    for i=1,3 do -- channels
       if mean then out[{{i},{},{}}]:add(-mean[i]) end
