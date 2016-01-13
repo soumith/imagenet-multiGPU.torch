@@ -1,23 +1,22 @@
 function createModel(nGPU)
-
    local features = nn.Sequential()
 
-   features:add(nn.SpatialConvolutionMM(3, 96, 11, 11, 4, 4))
-   features:add(nn.ReLU())
+   features:add(nn.SpatialConvolution(3, 96, 11, 11, 4, 4))
+   features:add(nn.ReLU(true))
    features:add(nn.SpatialMaxPooling(2, 2, 2, 2))
 
-   features:add(nn.SpatialConvolutionMM(96, 256, 5, 5, 1, 1))
-   features:add(nn.ReLU())
+   features:add(nn.SpatialConvolution(96, 256, 5, 5, 1, 1))
+   features:add(nn.ReLU(true))
    features:add(nn.SpatialMaxPooling(2, 2, 2, 2))
 
-   features:add(nn.SpatialConvolutionMM(256, 512, 3, 3, 1, 1, 1, 1))
-   features:add(nn.ReLU())
+   features:add(nn.SpatialConvolution(256, 512, 3, 3, 1, 1, 1, 1))
+   features:add(nn.ReLU(true))
 
-   features:add(nn.SpatialConvolutionMM(512, 1024, 3, 3, 1, 1, 1, 1))
-   features:add(nn.ReLU())
+   features:add(nn.SpatialConvolution(512, 1024, 3, 3, 1, 1, 1, 1))
+   features:add(nn.ReLU(true))
 
-   features:add(nn.SpatialConvolutionMM(1024, 1024, 3, 3, 1, 1, 1, 1))
-   features:add(nn.ReLU())
+   features:add(nn.SpatialConvolution(1024, 1024, 3, 3, 1, 1, 1, 1))
+   features:add(nn.ReLU(true))
    features:add(nn.SpatialMaxPooling(2, 2, 2, 2))
 
    features:cuda()
@@ -43,6 +42,5 @@ function createModel(nGPU)
    local model = nn.Sequential():add(features):add(classifier)
    model.imageSize = 256
    model.imageCrop = 224
-
    return model
 end
