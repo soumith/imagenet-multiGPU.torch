@@ -214,6 +214,9 @@ function trainBatch(inputsCPU, labelsCPU)
       optim.sgd(feval, parameters, optimState)
       outputsCPU:sub(chunk_start, chunk_end):copy(outputs)
    end
+   if opt.batchChunks > 1 then
+      gradParameters:mul(1.0 / opt.batchChunks)
+   end
 
    -- DataParallelTable's syncParameters
    model:apply(function(m) if m.syncParameters then m:syncParameters() end end)
