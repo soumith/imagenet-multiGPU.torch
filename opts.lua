@@ -58,7 +58,7 @@ function M.parse(arg)
     opt.save = paths.concat(opt.cache,
                             date.. '-' .. time .. '-' ..
                             cmd:string(opt.netType, opt,
-                                       {retrain=true, optimState=true, cache=true, data=true}))
+                                       {retrain=true, optimState=true, cache=true, data=true, rngState=true}))
     return opt
 end
 
