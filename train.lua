@@ -99,7 +99,17 @@ function train()
       donkeys:addjob(
          -- the job callback (runs in data-worker thread)
          function()
-            local inputs, labels = trainLoader:sample(opt.batchSize)
+            local inputs, labels
+            local ok = xpcall(function()
+                                 inputs, labels = trainLoader:sample(opt.batchSize)
+                              end, function()
+                                 print("ERROR!")
+                                 print(debug.traceback())
+                              end);
+            if not ok then
+               return
+            end
+            -- check the error
             return inputs, labels
          end,
          -- the end callback (runs in the main thread)
@@ -155,6 +165,11 @@ local parameters, gradParameters = model:getParameters()
 
 -- 4. trainBatch - Used by train() to train a single batch after the data is loaded.
 function trainBatch(inputsCPU, labelsCPU)
+   if not inputsCPU then
+      print("Loader error. Skipping batch.")
+      return
+   end
+
    cutorch.synchronize()
    collectgarbage()
    local dataLoadingTime = dataTimer:time().real
