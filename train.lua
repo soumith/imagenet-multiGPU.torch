@@ -66,6 +66,7 @@ end
 trainLogger = optim.Logger(paths.concat(opt.save, 'train.log'))
 local batchNumber
 local top1_epoch, loss_epoch
+trainConf = opt.conf and optim.ConfusionMatrix(classes) or nil
 
 -- 3. train - this function handles the high-level training loop,
 --            i.e. load data, train model, save model and state to disk
@@ -92,6 +93,7 @@ function train()
    local tm = torch.Timer()
    top1_epoch = 0
    loss_epoch = 0
+   if trainConf then trainConf:zero() end
    for i=1,opt.epochSize do
       -- queue jobs to data-workers
       donkeys:addjob(
@@ -195,6 +197,8 @@ function trainBatch(inputsCPU, labelsCPU)
    print(('Epoch: [%d][%d/%d]\tTime %.3f Err %.4f Top1-%%: %.2f LR %.0e DataLoadingTime %.3f'):format(
           epoch, batchNumber, opt.epochSize, timer:time().real, err, top1,
           optimState.learningRate, dataLoadingTime))
+
+   if trainConf then trainConf:batchAdd(outputs:float(), labelsCPU) end
 
    dataTimer:reset()
 end

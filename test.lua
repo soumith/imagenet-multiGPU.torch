@@ -15,6 +15,7 @@ end
 
 local batchNumber
 local top1_center, loss
+local testConf = opt.conf and optim.ConfusionMatrix(classes) or nil
 local timer = torch.Timer()
 
 function test()
@@ -30,6 +31,7 @@ function test()
 
    top1_center = 0
    loss = 0
+   if testConf then testConf:zero() end
    for i=1,nTest/opt.batchSize do -- nTest is set in 1_data.lua
       local indexStart = (i-1) * opt.batchSize + 1
       local indexEnd = (indexStart + opt.batchSize - 1)
@@ -57,6 +59,22 @@ function test()
                           .. 'average loss (per batch): %.2f \t '
                           .. 'accuracy [Center](%%):\t top-1 %.2f\t ',
                        epoch, timer:time().real, loss, top1_center))
+
+   if opt.conf then
+      io.write('==> Saving training confusion matrix...'); io.flush()
+      if opt.verboseConf then
+         local confFile = io.open(paths.concat(opt.save, 'confusion.txt'), 'w')
+         confFile:write('-- Training --------------------------------------------------------------------\n')
+         confFile:write(trainConf:__tostring__())
+         confFile:write('\n\n')
+         confFile:write('\n-- Testing ---------------------------------------------------------------------\n')
+         confFile:write(testConf:__tostring__())
+         confFile:write('\n\n')
+         confFile:close()
+      end
+      torch.save(paths.concat(opt.save, 'confusion.t7'), {trainConf, testConf})
+      print(' Done!')
+   end
 
    print('\n')
 
@@ -87,4 +105,6 @@ function testBatch(inputsCPU, labelsCPU)
    if batchNumber % 1024 == 0 then
       print(('Epoch: Testing [%d][%d/%d]'):format(epoch, batchNumber, nTest))
    end
+
+   if testConf then testConf:batchAdd(outputs:float(), labelsCPU) end
 end
