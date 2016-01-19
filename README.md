@@ -37,6 +37,21 @@ This helps with loading the data from disk faster.
 find . -name "*.JPEG" | xargs -I {} convert {} -resize "256^>" {}
 ```
 
+
+## Custom dataset creation
+
+If you have your own dataset to train the CNNs, use this dataset creation script to preprocess images and put them in a ImageNet-training compatible structure.
+It loads all images from `src` path and splits into two different sets (`training_dir` and `validation_dir`) of directories with the ratio of (`1-ratio` and `ratio`) under `dst` path.
+Images are resized and cropped into `dim`-squared images depending on crop mode such as `inner_crop` or outer crop (boundary padded by `offset`).
+This script is independent from the main training script and it has no assumption of source directory structure.
+It may not create certain class in validation set if the number of samples with respect to the ratio are too few.
+Using empty directory in the training or validation set will cause error in the main training script.
+
+```bash
+th create-dataset.lua --dst /path/to/dst --src /path/to/src
+```
+
+
 ### Running
 The training scripts come with several options which can be listed by running the script with the flag --help
 ```bash
@@ -88,6 +103,19 @@ If you ever want to reuse this example, and debug your scripts, it is suggested 
 th main.lua -nDonkeys 0 [...options...]
 ```
 
+
+## Model Conversion
+
+After the training, the model definition has a nested-table structure and contains training-specific modules which are not needed in evaluation phase.
+The model conversion script helps to optimize the model definition by simplifying its structure and removing unnecessary modules.
+The resulting output of the script is a model definition dependent on torch generic `nn` library.
+Users can choose degree of optimization by asserting flags, for example, `dropout`, `batchnorm` and `softmax`.
+
+```bash
+th convert-model.lua --src /path/to/src/model.t7 --dst /path/to/dst/model.t7
+```
+
+
 ### Code Description
 - `main.lua` (~30 lines) - loads all other files, starts training.
 - `opts.lua` (~50 lines) - all the command-line options and description
@@ -97,3 +125,20 @@ th main.lua -nDonkeys 0 [...options...]
 - `train.lua` (~190 lines) - logic for training the network. we hard-code a learning rate + weight decay schedule that produces good results.
 - `test.lua` (~120 lines) - logic for testing the network on validation set (including calculating top-1 and top-5 errors)
 - `dataset.lua` (~430 lines) - a general purpose data loader, mostly derived from [here: imagenetloader.torch](https://github.com/soumith/imagenetloader.torch). That repo has docs and more examples of using this loader.
+
+
+## Plotting charts
+
+In order to plot train and test accuracy and cross-entropy values, `cd` into the `results-` folder and into the correct sub-directory.
+Then, issue the following command
+
+```bash
+gnuplot ../../tools/plotCharts.plt
+```
+
+The two plots are saved respectively as `accuracy.eps` and `cross-entropy.eps` in the current folder.
+To quit the *gnuplot* session, press `<Return>` in the terminal window.
+
+
+## Selecting spcific GPUs to use:
+use ```CUDA_VISIBLE_DEVICES=2,3``` before launching your script
