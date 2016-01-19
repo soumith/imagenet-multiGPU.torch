@@ -157,6 +157,11 @@ if paths.filep(meanstdCache) then
    mean = meanstd.mean
    std = meanstd.std
    print('Loaded mean and std from cache.')
+elseif not opt.normalize then
+   local cache = {}
+   cache.mean = mean
+   cache.std = std
+   torch.save(meanstdCache, cache)
 else
    local tm = torch.Timer()
    local nSamples = 10000

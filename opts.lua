@@ -30,6 +30,7 @@ function M.parse(arg)
     cmd:option('-backend',     'cudnn', 'Options: cudnn | ccn2 | cunn')
     ------------- Data options ------------------------
     cmd:option('-nDonkeys',        2, 'number of donkeys to initialize (data loading threads)')
+    cmd:option('-normalize',    true, 'globally normalize samples during training')
     cmd:option('-imageSize',         256,    'Smallest side of the resized image')
     cmd:option('-cropSize',          224,    'Height and Width of image crop to be used as input layer')
     cmd:option('-nClasses',        1000, 'number of classes in the dataset')
