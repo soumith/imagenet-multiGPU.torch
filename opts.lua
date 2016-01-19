@@ -31,6 +31,7 @@ function M.parse(arg)
     ------------- Data options ------------------------
     cmd:option('-nDonkeys',        2, 'number of donkeys to initialize (data loading threads)')
     cmd:option('-normalize',    true, 'globally normalize samples during training')
+    cmd:option('-imgExtInsensitive', false, 'load JPEGs and PNGs regardless the file name extension')
     cmd:option('-imageSize',         256,    'Smallest side of the resized image')
     cmd:option('-cropSize',          224,    'Height and Width of image crop to be used as input layer')
     cmd:option('-nClasses',        1000, 'number of classes in the dataset')
