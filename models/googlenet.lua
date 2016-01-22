@@ -2,19 +2,19 @@ local function inception(input_size, config)
    local concat = nn.Concat(2)
    if config[1][1] ~= 0 then
       local conv1 = nn.Sequential()
-      conv1:add(nn.SpatialConvolution(input_size, config[1][1],1,1,1,1)):add(cudnn.ReLU(true))
+      conv1:add(nn.SpatialConvolution(input_size, config[1][1],1,1,1,1)):add(nn.ReLU(true))
       concat:add(conv1)
    end
 
    local conv3 = nn.Sequential()
-   conv3:add(nn.SpatialConvolution(  input_size, config[2][1],1,1,1,1)):add(cudnn.ReLU(true))
-   conv3:add(nn.SpatialConvolution(config[2][1], config[2][2],3,3,1,1,1,1)):add(cudnn.ReLU(true))
+   conv3:add(nn.SpatialConvolution(  input_size, config[2][1],1,1,1,1)):add(nn.ReLU(true))
+   conv3:add(nn.SpatialConvolution(config[2][1], config[2][2],3,3,1,1,1,1)):add(nn.ReLU(true))
    concat:add(conv3)
 
    local conv3xx = nn.Sequential()
-   conv3xx:add(nn.SpatialConvolution(  input_size, config[3][1],1,1,1,1)):add(cudnn.ReLU(true))
-   conv3xx:add(nn.SpatialConvolution(config[3][1], config[3][2],3,3,1,1,1,1)):add(cudnn.ReLU(true))
-   conv3xx:add(nn.SpatialConvolution(config[3][2], config[3][2],3,3,1,1,1,1)):add(cudnn.ReLU(true))
+   conv3xx:add(nn.SpatialConvolution(  input_size, config[3][1],1,1,1,1)):add(nn.ReLU(true))
+   conv3xx:add(nn.SpatialConvolution(config[3][1], config[3][2],3,3,1,1,1,1)):add(nn.ReLU(true))
+   conv3xx:add(nn.SpatialConvolution(config[3][2], config[3][2],3,3,1,1,1,1)):add(nn.ReLU(true))
    concat:add(conv3xx)
 
    local pool = nn.Sequential()
@@ -27,7 +27,7 @@ local function inception(input_size, config)
       error('Unknown pooling')
    end
    if config[4][2] ~= 0 then
-      pool:add(nn.SpatialConvolution(input_size, config[4][2],1,1,1,1)):add(cudnn.ReLU(true))
+      pool:add(nn.SpatialConvolution(input_size, config[4][2],1,1,1,1)):add(nn.ReLU(true))
    end
    concat:add(pool)
 
@@ -36,10 +36,10 @@ end
 
 function createModel(nGPU)
    local features = nn.Sequential()
-   features:add(nn.SpatialConvolution(3,64,7,7,2,2,3,3)):add(cudnn.ReLU(true))
+   features:add(nn.SpatialConvolution(3,64,7,7,2,2,3,3)):add(nn.ReLU(true))
    features:add(nn.SpatialMaxPooling(3,3,2,2):ceil())
-   features:add(nn.SpatialConvolution(64,64,1,1)):add(cudnn.ReLU(true))
-   features:add(nn.SpatialConvolution(64,192,3,3,1,1,1,1)):add(cudnn.ReLU(true))
+   features:add(nn.SpatialConvolution(64,64,1,1)):add(nn.ReLU(true))
+   features:add(nn.SpatialConvolution(64,192,3,3,1,1,1,1)):add(nn.ReLU(true))
    features:add(nn.SpatialMaxPooling(3,3,2,2):ceil())
    features:add(inception( 192, {{ 64},{ 64, 64},{ 64, 96},{'avg', 32}})) -- 3(a)
    features:add(inception( 256, {{ 64},{ 64, 96},{ 64, 96},{'avg', 64}})) -- 3(b)
