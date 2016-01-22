@@ -58,3 +58,53 @@ function loadDataParallel(filename, nGPU)
       error('The loaded model is not a Sequential or DataParallelTable module.')
    end
 end
+
+function saveRNGState(filename, donkeys, num_donkeys)
+   local state = {}
+   state.cpu = torch.getRNGState()
+   state.gpu = {}
+   state.donkeys = {}
+   for i = 1, cutorch.getDeviceCount() do
+      state.gpu[i] = cutorch.getRNGState(i)
+   end
+   if num_donkeys > 0 then
+      donkeys:synchronize()
+      donkeys:specific(true)
+      for i = 1, num_donkeys do
+         donkeys:addjob(i,
+            function()
+               return __threadid, torch.getRNGState()
+            end,
+            function(idx, thread_state)
+               state.donkeys[idx] = thread_state
+            end
+         )
+      end
+      donkeys:synchronize()
+      donkeys:specific(false)
+   end
+   torch.save(filename, state)
+end
+
+function loadRNGState(filename, donkeys, num_donkeys)
+   local state = torch.load(filename)
+   assert(cutorch.getDeviceCount() == #state.gpu, "Mismatch between number of GPUs and GPU RNG states")
+   assert(num_donkeys == #state.donkeys, "Mismatch in donkey number")
+   torch.setRNGState(state.cpu)
+   for i = 1, cutorch.getDeviceCount() do
+       cutorch.setRNGState(state.gpu[i], i)
+   end
+   if num_donkeys > 0 then
+      donkeys:synchronize()
+      donkeys:specific(true)
+      for i = 1, num_donkeys do
+         donkeys:addjob(i,
+            function()
+               torch.setRNGState(state.donkeys[__threadid])
+            end
+         )
+      end
+      donkeys:synchronize()
+      donkeys:specific(false)
+   end
+end
