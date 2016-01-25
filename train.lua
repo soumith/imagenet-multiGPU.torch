@@ -209,7 +209,7 @@ function trainBatch(inputsCPU, labelsCPU)
    for i=1,opt.batchChunks do
       local chunk_start = chunk_size * (i-1) + 1
       -- Take all remaining samples in the last iteration
-      local chunk_end = chunk_size * i and i < opt.batchChunks or -1
+      local chunk_end = i < opt.batchChunks and chunk_size * i or -1
       transferToGPU(chunk_start, chunk_end)
       optim.sgd(feval, parameters, optimState)
       outputsCPU:sub(chunk_start, chunk_end):copy(outputs)
