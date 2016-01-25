@@ -15,6 +15,8 @@ end
 
 local batchNumber
 local top1_center, loss
+local testConf = opt.conf and optim.ConfusionMatrix(classes) or nil
+local testBatchSize = math.floor(opt.batchSize / opt.batchChunks)
 local timer = torch.Timer()
 
 function test()
@@ -30,9 +32,10 @@ function test()
 
    top1_center = 0
    loss = 0
-   for i=1,nTest/opt.batchSize do -- nTest is set in 1_data.lua
-      local indexStart = (i-1) * opt.batchSize + 1
-      local indexEnd = (indexStart + opt.batchSize - 1)
+   if testConf then testConf:zero() end
+   for i=1,nTest/testBatchSize do -- nTest is set in 1_data.lua
+      local indexStart = (i-1) * testBatchSize + 1
+      local indexEnd = (indexStart + testBatchSize - 1)
       donkeys:addjob(
          -- work to be done by donkey thread
          function()
@@ -48,7 +51,7 @@ function test()
    cutorch.synchronize()
 
    top1_center = top1_center * 100 / nTest
-   loss = loss / (nTest/opt.batchSize) -- because loss is calculated per batch
+   loss = loss / (nTest/testBatchSize) -- because loss is calculated per batch
    testLogger:add{
       ['% top1 accuracy (test set) (center crop)'] = top1_center,
       ['avg loss (test set)'] = loss
@@ -58,6 +61,22 @@ function test()
                           .. 'accuracy [Center](%%):\t top-1 %.2f\t ',
                        epoch, timer:time().real, loss, top1_center))
 
+   if opt.conf then
+      io.write('==> Saving training confusion matrix...'); io.flush()
+      if opt.verboseConf then
+         local confFile = io.open(paths.concat(opt.save, 'confusion.txt'), 'w')
+         confFile:write('-- Training --------------------------------------------------------------------\n')
+         confFile:write(trainConf:__tostring__())
+         confFile:write('\n\n')
+         confFile:write('\n-- Testing ---------------------------------------------------------------------\n')
+         confFile:write(testConf:__tostring__())
+         confFile:write('\n\n')
+         confFile:close()
+      end
+      torch.save(paths.concat(opt.save, 'confusion.t7'), {trainConf, testConf})
+      print(' Done!')
+   end
+
    print('\n')
 
 
@@ -65,9 +84,10 @@ end -- of test()
 -----------------------------------------------------------------------------
 local inputs = torch.CudaTensor()
 local labels = torch.CudaTensor()
+local print_every = 16 * opt.batchChunks
 
 function testBatch(inputsCPU, labelsCPU)
-   batchNumber = batchNumber + opt.batchSize
+   batchNumber = batchNumber + testBatchSize
 
    inputs:resize(inputsCPU:size()):copy(inputsCPU)
    labels:resize(labelsCPU:size()):copy(labelsCPU)
@@ -84,7 +104,9 @@ function testBatch(inputsCPU, labelsCPU)
       local g = labelsCPU[i]
       if pred_sorted[i][1] == g then top1_center = top1_center + 1 end
    end
-   if batchNumber % 1024 == 0 then
+   if batchNumber % (testBatchSize * print_every) == 0 then
       print(('Epoch: Testing [%d][%d/%d]'):format(epoch, batchNumber, nTest))
    end
+
+   if testConf then testConf:batchAdd(outputs:float(), labelsCPU) end
 end

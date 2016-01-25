@@ -49,6 +49,29 @@ assert(nClasses == opt.nClasses,
 print('nClasses: ', nClasses)
 torch.save(paths.concat(opt.save, 'classes.t7'), classes)
 
+-- creating and saving <classes> and <revClasses>
+local revClasses = {}
+for i, c in ipairs(classes) do revClasses[c] = i end
+torch.save(paths.concat(opt.save, 'aux.t7'), {
+   ['classes']    = classes,
+   ['revClasses'] = revClasses,
+})
+
+-- convert classes to plain text
+local classes_td = {[1] = 'classes,targets\n'}
+for _,cat in pairs(classes) do
+   table.insert(classes_td, cat ..',1\n')
+end
+local file = io.open(paths.concat(opt.save, 'categories.txt'), 'w')
+file:write(table.concat(classes_td)):close()
+
+-- rename dataset statistics
+local stat = torch.load(paths.concat(opt.cache, 'meanstdCache.t7'))
+stat.mean = torch.Tensor(stat.mean or {0,0,0})
+stat.std = torch.Tensor(stat.std or {1,1,1})
+torch.save(paths.concat(opt.save, 'stat.t7'), stat)
+
+
 nTest = 0
 donkeys:addjob(function() return testLoader:size() end, function(c) nTest = c end)
 donkeys:synchronize()

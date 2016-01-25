@@ -31,6 +31,12 @@ if opt.optimState ~= 'none' then
     optimState = torch.load(opt.optimState)
 end
 
+if opt.rngState ~= 'none' then
+    assert(paths.filep(opt.rngState), 'File not found: ' .. opt.rngState)
+    print('Loading RNG state from file: ' .. opt.rngState)
+    loadRNGState(opt.rngState, donkeys, opt.nDonkeys)
+end
+
 -- Learning rate annealing schedule. We will build a new optimizer for
 -- each epoch.
 --
@@ -66,6 +72,7 @@ end
 trainLogger = optim.Logger(paths.concat(opt.save, 'train.log'))
 local batchNumber
 local top1_epoch, loss_epoch
+trainConf = opt.conf and optim.ConfusionMatrix(classes) or nil
 
 -- 3. train - this function handles the high-level training loop,
 --            i.e. load data, train model, save model and state to disk
@@ -92,12 +99,23 @@ function train()
    local tm = torch.Timer()
    top1_epoch = 0
    loss_epoch = 0
+   if trainConf then trainConf:zero() end
    for i=1,opt.epochSize do
       -- queue jobs to data-workers
       donkeys:addjob(
          -- the job callback (runs in data-worker thread)
          function()
-            local inputs, labels = trainLoader:sample(opt.batchSize)
+            local inputs, labels
+            local ok = xpcall(function()
+                                 inputs, labels = trainLoader:sample(opt.batchSize)
+                              end, function()
+                                 print("ERROR!")
+                                 print(debug.traceback())
+                              end);
+            if not ok then
+               return
+            end
+            -- check the error
             return inputs, labels
          end,
          -- the end callback (runs in the main thread)
@@ -129,16 +147,21 @@ function train()
    local function sanitize(net)
       local list = net:listModules()
       for _,val in ipairs(list) do
-            for name,field in pairs(val) do
-               if torch.type(field) == 'cdata' then val[name] = nil end
-               if (name == 'output' or name == 'gradInput') then
+         for name,field in pairs(val) do
+            if torch.type(field) == 'cdata' then val[name] = nil end
+            if (name == 'output' or name == 'gradInput') then
+               if torch.isTensor(val[name]) then
                   val[name] = field.new()
+               elseif torch.type(val[name]) == 'table' then
+                  val[name] = {}
                end
             end
+         end
       end
    end
    sanitize(model)
    saveDataParallel(paths.concat(opt.save, 'model_' .. epoch .. '.t7'), model) -- defined in util.lua
+   saveRNGState(paths.concat(opt.save, 'rngState_' .. epoch .. '.t7'), donkeys, opt.nDonkeys) -- defined in util.lua
    torch.save(paths.concat(opt.save, 'optimState_' .. epoch .. '.t7'), optimState)
 end -- of train()
 -------------------------------------------------------------------------------------------
@@ -153,25 +176,47 @@ local parameters, gradParameters = model:getParameters()
 
 -- 4. trainBatch - Used by train() to train a single batch after the data is loaded.
 function trainBatch(inputsCPU, labelsCPU)
+   if not inputsCPU then
+      print("Loader error. Skipping batch.")
+      return
+   end
+
    cutorch.synchronize()
    collectgarbage()
    local dataLoadingTime = dataTimer:time().real
    timer:reset()
 
-   -- transfer over to GPU
-   inputs:resize(inputsCPU:size()):copy(inputsCPU)
-   labels:resize(labelsCPU:size()):copy(labelsCPU)
-
    local err, outputs
+   local outputsCPU = torch.FloatTensor(opt.batchSize, nClasses)
    feval = function(x)
-      model:zeroGradParameters()
       outputs = model:forward(inputs)
       err = criterion:forward(outputs, labels)
       local gradOutputs = criterion:backward(outputs, labels)
       model:backward(inputs, gradOutputs)
       return err, gradParameters
    end
-   optim.sgd(feval, parameters, optimState)
+
+   local chunkedInputsCPU, chunkedLabelsCPU
+   local transferToGPU = function(from, to)
+      chunkedInputsCPU = inputsCPU:sub(from, to)
+      chunkedLabelsCPU = labelsCPU:sub(from, to)
+      inputs:resize(chunkedInputsCPU:size()):copy(chunkedInputsCPU)
+      labels:resize(chunkedLabelsCPU:size()):copy(chunkedLabelsCPU)
+   end
+
+   model:zeroGradParameters()
+   local chunk_size = math.floor(opt.batchSize / opt.batchChunks)
+   for i=1,opt.batchChunks do
+      local chunk_start = chunk_size * (i-1) + 1
+      -- Take all remaining samples in the last iteration
+      local chunk_end = i < opt.batchChunks and chunk_size * i or -1
+      transferToGPU(chunk_start, chunk_end)
+      optim.sgd(feval, parameters, optimState)
+      outputsCPU:sub(chunk_start, chunk_end):copy(outputs)
+   end
+   if opt.batchChunks > 1 then
+      gradParameters:mul(1.0 / opt.batchChunks)
+   end
 
    -- DataParallelTable's syncParameters
    model:apply(function(m) if m.syncParameters then m:syncParameters() end end)
@@ -182,12 +227,12 @@ function trainBatch(inputsCPU, labelsCPU)
    -- top-1 error
    local top1 = 0
    do
-      local _,prediction_sorted = outputs:float():sort(2, true) -- descending
+      local _,max_prediction = outputsCPU:max(2)
       for i=1,opt.batchSize do
-	 if prediction_sorted[i][1] == labelsCPU[i] then
-	    top1_epoch = top1_epoch + 1;
-	    top1 = top1 + 1
-	 end
+         if max_prediction[i][1] == labelsCPU[i] then
+            top1_epoch = top1_epoch + 1;
+            top1 = top1 + 1
+         end
       end
       top1 = top1 * 100 / opt.batchSize;
    end
@@ -195,6 +240,8 @@ function trainBatch(inputsCPU, labelsCPU)
    print(('Epoch: [%d][%d/%d]\tTime %.3f Err %.4f Top1-%%: %.2f LR %.0e DataLoadingTime %.3f'):format(
           epoch, batchNumber, opt.epochSize, timer:time().real, err, top1,
           optimState.learningRate, dataLoadingTime))
+
+   if trainConf then trainConf:batchAdd(outputsCPU, labelsCPU) end
 
    dataTimer:reset()
 end

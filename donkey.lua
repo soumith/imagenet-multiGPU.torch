@@ -7,6 +7,7 @@
 --  of patent rights can be found in the PATENTS file in the same directory.
 --
 require 'image'
+require('pl.stringx').import()
 paths.dofile('dataset.lua')
 paths.dofile('util.lua')
 
@@ -27,6 +28,29 @@ end
 local loadSize   = {3, opt.imageSize, opt.imageSize}
 local sampleSize = {3, opt.cropSize, opt.cropSize}
 
+if opt.imgExtInsensitive then
+   -- Overwrite image.load()
+   -- Load an image (with image.load()) regardless its extension
+   function image.load(p, n, t)
+      local img, ok
+      local f = io.open(p, 'r')
+      if f then
+         local h = f:read(4)
+         f:close()
+
+         if h:startswith(string.char(0xff, 0xd8, 0xff)) then
+            ok, img = pcall(image.loadJPG, p, n, t)
+         elseif h:startswith(string.char(0x89, 0x50, 0x4e, 0x47)) then
+            ok, img = pcall(image.loadPNG, p, n, t)
+         end
+      end
+
+      if ok and img:dim() == 3 and f then return img else
+         os.execute('echo "' .. p .. '" >> err.img')
+         return torch.FloatTensor(loadSize[1], loadSize[2], loadSize[3]):uniform()
+      end
+   end
+end
 
 local function loadImage(path)
    local input = image.load(path, 3, 'float')
@@ -157,6 +181,11 @@ if paths.filep(meanstdCache) then
    mean = meanstd.mean
    std = meanstd.std
    print('Loaded mean and std from cache.')
+elseif not opt.normalize then
+   local cache = {}
+   cache.mean = mean
+   cache.std = std
+   torch.save(meanstdCache, cache)
 else
    local tm = torch.Timer()
    local nSamples = 10000

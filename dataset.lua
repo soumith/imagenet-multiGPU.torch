@@ -303,7 +303,11 @@ end
 -- getByClass
 function dataset:getByClass(class)
    local index = math.max(1, math.ceil(torch.uniform() * self.classListSample[class]:nElement()))
-   local imgpath = ffi.string(torch.data(self.imagePath[self.classListSample[class][index]]))
+   local sample = self.classListSample[class][index]
+   if self.imagePath:size(1) < sample then
+       error(string.format('There is no path for sample %d = %d index in class %d! (There are only %d paths)', sample, index, class, self.imagePath:size(1)))
+   end
+   local imgpath = ffi.string(torch.data(self.imagePath[sample]))
    return self:sampleHookTrain(imgpath)
 end
 
@@ -323,12 +327,14 @@ local function tableToOutput(self, dataTable, scalarTable)
 end
 
 -- sampler, samples from the training set.
-function dataset:sample(quantity)
+function dataset:sample(quantity, min)
    assert(quantity)
+   local min = min or 1
    local dataTable = {}
    local scalarTable = {}
+   local class
    for i=1,quantity do
-      local class = torch.random(1, #self.classes)
+      class = ((i-1)%min == 0) and torch.random(1, #self.classes) or class
       local out = self:getByClass(class)
       table.insert(dataTable, out)
       table.insert(scalarTable, class)
