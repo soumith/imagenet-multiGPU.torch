@@ -72,7 +72,8 @@ function testBatch(inputsCPU, labelsCPU)
    inputs:resize(inputsCPU:size()):copy(inputsCPU)
    labels:resize(labelsCPU:size()):copy(labelsCPU)
 
-   local outputs = model:forward(inputs)
+   -- sub for models with auxiliary classifiers
+   local outputs = model:forward(inputs):sub(1, -1, 1, nClasses)
    local err = criterion:forward(outputs, labels)
    cutorch.synchronize()
    local pred = outputs:float()
