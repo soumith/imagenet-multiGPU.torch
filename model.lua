@@ -29,7 +29,7 @@ else
    if opt.backend == 'cudnn' then
       require 'cudnn'
       cudnn.convert(model, cudnn)
-   else
+   elseif opt.backend ~= 'nn' then
       error'Unsupported backend'
    end
 end
