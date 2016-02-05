@@ -1,6 +1,4 @@
 function createModel(nGPU)
-   require 'cudnn'
-
    local modelType = 'A' -- on a titan black, B/D/E run out of memory even for batch-size 32
 
    -- Create tables describing VGG configurations A, B, D, E
@@ -22,12 +20,12 @@ function createModel(nGPU)
       local iChannels = 3;
       for k,v in ipairs(cfg) do
          if v == 'M' then
-            features:add(cudnn.SpatialMaxPooling(2,2,2,2))
+            features:add(nn.SpatialMaxPooling(2,2,2,2))
          else
             local oChannels = v;
-            local conv3 = cudnn.SpatialConvolution(iChannels,oChannels,3,3,1,1,1,1);
+            local conv3 = nn.SpatialConvolution(iChannels,oChannels,3,3,1,1,1,1);
             features:add(conv3)
-            features:add(cudnn.ReLU(true))
+            features:add(nn.ReLU(true))
             iChannels = oChannels;
          end
       end
@@ -40,18 +38,18 @@ function createModel(nGPU)
    classifier:add(nn.View(512*7*7))
    classifier:add(nn.Linear(512*7*7, 4096))
    classifier:add(nn.Threshold(0, 1e-6))
-   features:add(nn.BatchNormalization(4096, 1e-3))
    classifier:add(nn.Dropout(0.5))
    classifier:add(nn.Linear(4096, 4096))
    classifier:add(nn.Threshold(0, 1e-6))
-   features:add(nn.BatchNormalization(4096, 1e-3))
    classifier:add(nn.Dropout(0.5))
-   classifier:add(nn.Linear(4096, 1000))
+   classifier:add(nn.Linear(4096, nClasses))
    classifier:add(nn.LogSoftMax())
    classifier:cuda()
 
    local model = nn.Sequential()
    model:add(features):add(classifier)
+   model.imageSize = 256
+   model.imageCrop = 224
 
    return model
 end

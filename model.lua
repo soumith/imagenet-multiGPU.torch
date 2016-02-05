@@ -23,10 +23,15 @@ if opt.retrain ~= 'none' then
    print('Loading model from file: ' .. opt.retrain);
    model = loadDataParallel(opt.retrain, opt.nGPU) -- defined in util.lua
 else
-   local config = opt.netType .. '_' .. opt.backend
-   paths.dofile('models/' .. config .. '.lua')
-   print('=> Creating model from file: models/' .. config .. '.lua')
+   paths.dofile('models/' .. opt.netType .. '.lua')
+   print('=> Creating model from file: models/' .. opt.netType .. '.lua')
    model = createModel(opt.nGPU) -- for the model creation code, check the models/ folder
+   if opt.backend == 'cudnn' then
+      require 'cudnn'
+      cudnn.convert(model, cudnn)
+   elseif opt.backend ~= 'nn' then
+      error'Unsupported backend'
+   end
 end
 
 -- 2. Create Criterion
