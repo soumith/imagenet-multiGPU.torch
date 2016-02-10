@@ -163,7 +163,10 @@ function trainBatch(inputsCPU, labelsCPU)
    optim.sgd(feval, parameters, optimState)
 
    -- DataParallelTable's syncParameters
-   model:apply(function(m) if m.syncParameters then m:syncParameters() end end)
+   if model.needsSync then
+      model:syncParameters()
+   end
+   
 
    cutorch.synchronize()
    batchNumber = batchNumber + 1
