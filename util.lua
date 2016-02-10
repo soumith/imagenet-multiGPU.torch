@@ -10,8 +10,9 @@ function makeDataParallel(model, nGPU)
          cutorch.setDevice(i)
          model:add(model_single:clone():cuda(), i)
       end
-      cutorch.setDevice(opt.GPU)
    end
+   cutorch.setDevice(opt.GPU)
+
    return model
 end
 
