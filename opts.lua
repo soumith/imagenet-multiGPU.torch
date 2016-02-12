@@ -9,8 +9,6 @@
 local M = { }
 
 function M.parse(arg)
-   local defaultDir = 'imagenet/'
-
     local cmd = torch.CmdLine()
     cmd:text()
     cmd:text('Torch-7 Imagenet Training script')
@@ -18,12 +16,8 @@ function M.parse(arg)
     cmd:text('Options:')
     ------------ General options --------------------
 
-    cmd:option('-cache',
-               defaultDir ..'/checkpoint',
-               'subdirectory in which to save/log experiments')
-    cmd:option('-data',
-               defaultDir .. '/imagenet_raw_images/256',
-               'Home of ImageNet dataset')
+    cmd:option('-cache', './imagenet/checkpoint/', 'subdirectory in which to save/log experiments')
+    cmd:option('-data', './imagenet/imagenet_raw_images/256', 'Home of ImageNet dataset')
     cmd:option('-manualSeed',         2, 'Manually set RNG seed')
     cmd:option('-GPU',                1, 'Default preferred GPU')
     cmd:option('-nGPU',               1, 'Number of GPUs to use by default')
@@ -51,10 +45,10 @@ function M.parse(arg)
     local opt = cmd:parse(arg or {})
     -- add commandline specified options
     opt.save = paths.concat(opt.cache,
-                            cmd:string('alexnet12', opt,
-                                       {retrain=true, optimState=true, cache=true, data=true}))
+                            cmd:string(opt.netType, opt,
+                                       {netType=true, retrain=true, optimState=true, cache=true, data=true}))
     -- add date/time
-    opt.save = paths.concat(opt.save, ',' .. os.date():gsub(' ',''))
+    opt.save = paths.concat(opt.save, '' .. os.date():gsub(' ',''))
     return opt
 end
 
