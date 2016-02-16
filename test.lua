@@ -8,11 +8,6 @@
 --
 testLogger = optim.Logger(paths.concat(opt.save, 'test.log'))
 
-local testDataIterator = function()
-   testLoader:reset()
-   return function() return testLoader:get_batch(false) end
-end
-
 local batchNumber
 local top1_center, loss
 local timer = torch.Timer()
