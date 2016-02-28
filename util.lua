@@ -1,3 +1,4 @@
+require 'cunn'
 local ffi=require 'ffi'
 
 function makeDataParallel(model, nGPU)
