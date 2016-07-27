@@ -162,12 +162,6 @@ function trainBatch(inputsCPU, labelsCPU)
    end
    optim.sgd(feval, parameters, optimState)
 
-   -- DataParallelTable's syncParameters
-   if model.needsSync then
-      model:syncParameters()
-   end
-   
-
    cutorch.synchronize()
    batchNumber = batchNumber + 1
    loss_epoch = loss_epoch + err
