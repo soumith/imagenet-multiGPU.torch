@@ -29,6 +29,9 @@ else
    if opt.backend == 'cudnn' then
       require 'cudnn'
       cudnn.convert(model, cudnn)
+   elseif opt.backend == 'cunn' then
+      require 'cunn'
+      model = model:cuda()
    elseif opt.backend ~= 'nn' then
       error'Unsupported backend'
    end
