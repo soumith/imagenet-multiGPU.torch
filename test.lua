@@ -25,9 +25,9 @@ function test()
 
    top1_center = 0
    loss = 0
-   for i=1,nTest/opt.batchSize do -- nTest is set in 1_data.lua
+   for i = 1, math.ceil(nTest/opt.batchSize) do -- nTest is set in 1_data.lua
       local indexStart = (i-1) * opt.batchSize + 1
-      local indexEnd = (indexStart + opt.batchSize - 1)
+      local indexEnd = math.min(nTest, indexStart + opt.batchSize - 1)
       donkeys:addjob(
          -- work to be done by donkey thread
          function()
@@ -43,7 +43,7 @@ function test()
    cutorch.synchronize()
 
    top1_center = top1_center * 100 / nTest
-   loss = loss / (nTest/opt.batchSize) -- because loss is calculated per batch
+   loss = loss / nTest -- because loss is calculated per batch
    testLogger:add{
       ['% top1 accuracy (test set) (center crop)'] = top1_center,
       ['avg loss (test set)'] = loss
@@ -72,7 +72,7 @@ function testBatch(inputsCPU, labelsCPU)
    cutorch.synchronize()
    local pred = outputs:float()
 
-   loss = loss + err
+   loss = loss + err * outputs:size(1)
 
    local _, pred_sorted = pred:sort(2, true)
    for i=1,pred:size(1) do
