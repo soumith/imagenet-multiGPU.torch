@@ -22,6 +22,7 @@ function M.parse(arg)
     cmd:option('-GPU',                1, 'Default preferred GPU')
     cmd:option('-nGPU',               1, 'Number of GPUs to use by default')
     cmd:option('-backend',     'cudnn', 'Options: cudnn | nn')
+    cmd:option('-cudnnAutotune',     0, 'Enable the cudnn auto tune feature Options: 1 | 0')
     ------------- Data options ------------------------
     cmd:option('-nDonkeys',        2, 'number of donkeys to initialize (data loading threads)')
     cmd:option('-imageSize',         256,    'Smallest side of the resized image')
