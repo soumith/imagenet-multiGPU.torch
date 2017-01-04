@@ -1,18 +1,31 @@
 require 'cunn'
 local ffi=require 'ffi'
 
-function makeDataParallel(model, nGPU)
+function makeDataParallel(model, nGPU)   
    if nGPU > 1 then
       print('converting module to nn.DataParallelTable')
       assert(nGPU <= cutorch.getDeviceCount(), 'number of GPUs less than nGPU specified')
-      local model_single = model
-      model = nn.DataParallelTable(1)
-      for i=1, nGPU do
-         cutorch.setDevice(i)
-         model:add(model_single:clone():cuda(), i)
+      if opt.backend == 'cudnn' and opt.cudnnAutotune == 1 then
+        local gpu_table = torch.range(1, nGPU):totable()
+        local dpt = nn.DataParallelTable(1, true):add(model, gpu_table):threads(function() require 'cudnn'
+                                       cudnn.benchmark = true  end)
+        dpt.gradInput = nil
+        model = dpt:cuda()
+      else
+        local model_single = model
+        model = nn.DataParallelTable(1)
+        for i=1, nGPU do
+           cutorch.setDevice(i)
+           model:add(model_single:clone():cuda(), i)
+        end
+        cutorch.setDevice(opt.GPU)
+      end
+   else
+      if (opt.backend == 'cudnn' and opt.cudnnAutotune == 1) then
+        require 'cudnn'
+        cudnn.benchmark = true
       end
    end
-   cutorch.setDevice(opt.GPU)
 
    return model
 end
