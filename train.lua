@@ -151,24 +151,44 @@ function trainBatch(inputsCPU, labelsCPU)
    inputs:resize(inputsCPU:size()):copy(inputsCPU)
    labels:resize(labelsCPU:size()):copy(labelsCPU)
 
-   local err, outputs
+   local modelerr, auxerr, totalerr, outputs
    feval = function(x)
       model:zeroGradParameters()
       outputs = model:forward(inputs)
-      err = criterion:forward(outputs, labels)
-      local gradOutputs = criterion:backward(outputs, labels)
+      local model_outputs = outputs:sub(1, -1, 1, nClasses)
+      modelerr = criterion:forward(model_outputs, labels)
+      totalerr = modelerr
+      local gradOutputs = criterion:backward(model_outputs, labels)
+
+      if model.auxClassifiers and model.auxClassifiers > 0 then
+         local allGradOutputs = torch.Tensor():typeAs(gradOutputs):resizeAs(outputs)
+         allGradOutputs:sub(1, -1, 1, nClasses):copy(gradOutputs)
+         auxerr = {}
+         for i=1,model.auxClassifiers do
+            local first = i * nClasses + 1
+            local last = (i+1) * nClasses
+            local classifier_outputs = outputs:sub(1, -1, first, last)
+            auxerr[i] = criterion:forward(classifier_outputs, labels)
+            totalerr = totalerr + auxerr[i] * model.auxWeights[i]
+            local auxGradOutput = criterion:backward(classifier_outputs, labels) * model.auxWeights[i]
+            allGradOutputs:sub(1, -1, first, last):copy(auxGradOutput)
+         end
+         gradOutputs = allGradOutputs
+      end
+
       model:backward(inputs, gradOutputs)
-      return err, gradParameters
+      return totalerr, gradParameters
    end
    optim.sgd(feval, parameters, optimState)
+   local modelOutputs = outputs:sub(1, -1, 1, nClasses):float()
 
    cutorch.synchronize()
    batchNumber = batchNumber + 1
-   loss_epoch = loss_epoch + err
+   loss_epoch = loss_epoch + modelerr
    -- top-1 error
    local top1 = 0
    do
-      local _,prediction_sorted = outputs:float():sort(2, true) -- descending
+      local _,prediction_sorted = modelOutputs:sort(2, true) -- descending
       for i=1,opt.batchSize do
 	 if prediction_sorted[i][1] == labelsCPU[i] then
 	    top1_epoch = top1_epoch + 1;
@@ -177,10 +197,19 @@ function trainBatch(inputsCPU, labelsCPU)
       end
       top1 = top1 * 100 / opt.batchSize;
    end
+
    -- Calculate top-1 error, and print information
    print(('Epoch: [%d][%d/%d]\tTime %.3f Err %.4f Top1-%%: %.2f LR %.0e DataLoadingTime %.3f'):format(
-          epoch, batchNumber, opt.epochSize, timer:time().real, err, top1,
+          epoch, batchNumber, opt.epochSize, timer:time().real, totalerr, top1,
           optimState.learningRate, dataLoadingTime))
+
+   -- Print details about aux classifier loss
+   if model.auxClassifiers and model.auxClassifiers > 0 then
+      print(string.format('\t  main model: Err %.4f', modelerr))
+      for i=1,model.auxClassifiers do
+         print(string.format('\tclassifier %d: Err %.4f (* %.1f = %.4f)', i, auxerr[i], model.auxWeights[i], auxerr[i] * model.auxWeights[i]))
+      end
+   end
 
    dataTimer:reset()
 end

@@ -79,6 +79,9 @@ function createModel(nGPU)
    model.imageSize = 256
    model.imageCrop = 224
 
+   model.auxClassifiers = 1
+   model.auxWeights = {0.3}
+
 
    return model
 end
