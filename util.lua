@@ -2,6 +2,7 @@ require 'cunn'
 local ffi=require 'ffi'
 
 function makeDataParallel(model, nGPU)   
+
    if nGPU > 1 then
       print('converting module to nn.DataParallelTable')
       assert(nGPU <= cutorch.getDeviceCount(), 'number of GPUs less than nGPU specified')
