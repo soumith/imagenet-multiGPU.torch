@@ -26,6 +26,15 @@ else
    paths.dofile('models/' .. opt.netType .. '.lua')
    print('=> Creating model from file: models/' .. opt.netType .. '.lua')
    model = createModel(opt.nGPU) -- for the model creation code, check the models/ folder
+   if opt.wInit == 'kaiming' then
+     for indx,module in pairs(model:findModules('nn.SpatialConvolution')) do
+       module.weight:normal(0,math.sqrt(2/(module.kW*module.kH*module.nOutputPlane)))
+     end
+   elseif opt.wInit == 'xavier' then
+     for indx,module in pairs(model:findModules('nn.SpatialConvolution')) do
+       module.weight:normal(0,math.sqrt(1/(module.kW*module.kH*module.nOutputPlane)))
+     end
+   end   
    if opt.backend == 'cudnn' then
       require 'cudnn'
       cudnn.convert(model, cudnn)
